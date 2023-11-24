@@ -96,7 +96,7 @@ static const tU8 LinPidTab[64] = {
     0xf0, 0xb1, 0x32, 0x73, 0xb4, 0xf5, 0x76, 0x37, 0x78, 0x39, 0xba, 0xfb, 
     0x3c, 0x7d, 0xfe, 0xbf, 
 };
-static comm_tool_t commTool = {0};
+static comm_tool_t CommToolCnt = {0};
 
 /*******************************************************************************
 * Global variable definitions   (scope: module-exported)
@@ -122,7 +122,7 @@ static tS16 set_lin_master_slave_mode(lin_status_t _state)
 
     buff[1] = _state == Lin_Master ? 0x03 : 0x04;
 
-    return comm_tool_send_data(&commTool, buff, 2);
+    return comm_tool_send_data(&CommToolCnt, buff, 2);
 }
 
 static tS16 set_lin_baudrate(tU16 _baudrate)
@@ -155,7 +155,7 @@ static tS16 set_lin_baudrate(tU16 _baudrate)
     break;
     }
 
-    return comm_tool_send_data(&commTool, buff, 6);
+    return comm_tool_send_data(&CommToolCnt, buff, 6);
 }
 
 static tU8 get_lin_pid(tU8 _id)
@@ -190,10 +190,10 @@ static tU8 get_lin_checksum(tU8* _pdata, tU8 _nsize)
 *******************************************************************************/
 tS16 set_lin_device_init(const tS8* _pcanname, tU16 _baudrate)
 {
-    memset(&commTool, 0, sizeof(commTool));
+    memset(&CommToolCnt, 0, sizeof(CommToolCnt));
 
-    if (comm_tool_scan(&commTool, _pcanname)) return -1;
-    if (comm_tool_open(&commTool, 13)) return -2;
+    if (comm_tool_scan(&CommToolCnt, _pcanname)) return -1;
+    if (comm_tool_open(&CommToolCnt, 13)) return -2;
 
     LOG_INF("Start Configure lin device!");
     if (set_lin_master_slave_mode(Lin_Master)) {
@@ -213,17 +213,17 @@ tS16 set_lin_device_init(const tS8* _pcanname, tU16 _baudrate)
 
 tS16 set_lin_device_deinit(void)
 {
-    commTool.ComStateCtl.ReceEnable = FALSE;
-    commTool.ComStateCtl.SendEnable = FALSE;
+    CommToolCnt.ComStateCtl.ReceEnable = FALSE;
+    CommToolCnt.ComStateCtl.SendEnable = FALSE;
     LOG_INF("Successfully stop LIN communication!");
-    return comm_tool_close(&commTool);
+    return comm_tool_close(&CommToolCnt);
 }
 
 tS16 lin_frame_master_write(lin_frame_msg_t* _frame)
 {
     lin_frame_t linframe;
 
-    if (INVALID_HANDLE_VALUE != commTool.mHand) {
+    if (INVALID_HANDLE_VALUE != CommToolCnt.mHand) {
         memset(&linframe, 0, sizeof(linframe));
         linframe.msg.command = 2;
         if (_frame->id >= 0x40) {
@@ -253,7 +253,7 @@ tS16 lin_frame_master_write(lin_frame_msg_t* _frame)
             linframe.msg.crc = get_lin_checksum(&_frame->pid, _frame->dlc + 1);
         }
 
-        return comm_tool_send_data(&commTool, linframe.msgData, 13);
+        return comm_tool_send_data(&CommToolCnt, linframe.msgData, 13);
     } else {
         LOG_ERR("Lin device is not initialized or initialization failed!");
         return LIN_DERIVE_INITIAL_FAIL;
@@ -265,19 +265,19 @@ tS16 lin_frame_master_read(lin_frame_msg_t* _frame)
     lin_frame_t linframe;
     tU8 recvsize = 13;
 
-    if (INVALID_HANDLE_VALUE != commTool.mHand) {
+    if (INVALID_HANDLE_VALUE != CommToolCnt.mHand) {
         memset(&linframe, 0, sizeof(linframe));
         linframe.msg.command = 2;
         linframe.msg.id = _frame->id;
         linframe.msg.dlc = 0;
         linframe.msg.crc_check_status = _frame->crc_check_status;
-        if (comm_tool_send_data(&commTool , linframe.msgData, 13)) {
+        if (comm_tool_send_data(&CommToolCnt , linframe.msgData, 13)) {
             LOG_ERR("LIN data reading failed!");
             return LIN_READ_FAIL;
         }
 
         memset(&linframe, 0, sizeof(linframe));
-        while(comm_tool_rece_data(&commTool, linframe.msgData, &recvsize));
+        while(comm_tool_rece_data(&CommToolCnt, linframe.msgData, &recvsize));
         if (recvsize != 13 || linframe.msg.command != 2) {
             LOG_ERR("LIN data format error!");
             return LIN_READ_FRAME_FORMAT_ERR;
@@ -322,7 +322,7 @@ tS16 lin_frame_slave_write(lin_frame_msg_t* _frame, tU8 _state)
 {
     lin_slaver_write_t linframe;
 
-    if (INVALID_HANDLE_VALUE != commTool.mHand) {
+    if (INVALID_HANDLE_VALUE != CommToolCnt.mHand) {
         memset(&linframe, 0, sizeof(linframe));
         if (_frame->id >= 0x40) {
             LOG_ERR("LIN ID exceeds valid range: %d", _frame->id);
@@ -346,7 +346,7 @@ tS16 lin_frame_slave_write(lin_frame_msg_t* _frame, tU8 _state)
             linframe.msg.crc = get_lin_checksum(&_frame->pid, _frame->dlc + 1);
         }
 
-        return comm_tool_send_data(&commTool, linframe.msgData, 16);
+        return comm_tool_send_data(&CommToolCnt, linframe.msgData, 16);
     } else {
         LOG_ERR("Lin device is not initialized or initialization failed!");
         return LIN_DERIVE_INITIAL_FAIL;
@@ -359,9 +359,9 @@ tS16 lin_frame_slave_read(lin_frame_msg_t* _frame)
     tU8 recvsize = 13;
 
     memset(_frame, 0 , sizeof(lin_frame_msg_t));
-    if (INVALID_HANDLE_VALUE != commTool.mHand) {
+    if (INVALID_HANDLE_VALUE != CommToolCnt.mHand) {
         memset(&linframe, 0, sizeof(linframe));
-        if (comm_tool_rece_data(&commTool, linframe.msgData, &recvsize)) {
+        if (comm_tool_rece_data(&CommToolCnt, linframe.msgData, &recvsize)) {
             return LIN_READ_TIMEOUT;
         }
         if (recvsize == 0 && linframe.msg.command == 0) {
@@ -409,7 +409,7 @@ tS16 lin_frame_slave_read(lin_frame_msg_t* _frame)
 
 tS16 wait_lin_frame_send_complete(void)
 {
-    while(FALSE == commTool.ComDataFifo.TXEmpty) Sleep(0);
+    while(FALSE == CommToolCnt.ComDataFifo.TXEmpty) Sleep(0);
 
     return 0;
 }

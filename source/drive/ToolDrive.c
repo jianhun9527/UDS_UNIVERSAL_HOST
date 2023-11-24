@@ -173,23 +173,23 @@ tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort)
 
         // 提取串口号
         sscanf_s(szName, "(COM%[0-9])", numbuf, 4);
-        memcpy(&_pctrl->DevicePort[_pctrl->CommTool][0], "\\\\.\\COM", 7);
-        memcpy(&_pctrl->DevicePort[_pctrl->CommTool][7], numbuf, 4);
-        memcpy(&_pctrl->DeviceName[_pctrl->CommTool][0], szBuf, SP_NAME_LEN_MAX);
-        _pctrl->CommTool++;
+        memcpy(&_pctrl->DevicePort[_pctrl->CommToolCnt][0], "\\\\.\\COM", 7);
+        memcpy(&_pctrl->DevicePort[_pctrl->CommToolCnt][7], numbuf, 4);
+        memcpy(&_pctrl->DeviceName[_pctrl->CommToolCnt][0], szBuf, SP_NAME_LEN_MAX);
+        _pctrl->CommToolCnt++;
     }
 
     // 释放设备集句柄
     SetupDiDestroyDeviceInfoList(hDevInfo);
 
     LOG_INF("Serial CAN_LIN_Tool device search completed!");
-    if (_pctrl->CommTool == 0) {
+    if (_pctrl->CommToolCnt == 0) {
         _pctrl->mHand = INVALID_HANDLE_VALUE;
         LOG_ERR("No CAN_LIN_Tool device connected!");
         return -1;
     } else {
         LOG_INF("CAN_LIN_Tool Device List:");
-        for (tU16 idx = 0; idx < _pctrl->CommTool; idx++)
+        for (tU16 idx = 0; idx < _pctrl->CommToolCnt; idx++)
             LOG_INF("No: %d - %s", idx, _pctrl->DeviceName[idx]);
         printf("====================================================================\r\n");
     }
@@ -201,7 +201,7 @@ tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size)
 {
     // Use the CreateFile function to open the serial port
     _pctrl->mHand = CreateFile(
-        (LPCSTR)_pctrl->DevicePort[_pctrl->SetToolNo],    // 串口名称
+        (LPCSTR)_pctrl->DevicePort[_pctrl->SetCommToolNo],    // 串口名称
         GENERIC_READ | GENERIC_WRITE,                       // 读写权限
         0,                                                  // 共享模式（0表示不共享）
         NULL,                                               // 安全属性（默认）

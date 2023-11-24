@@ -76,7 +76,7 @@ typedef struct config_file
     tS8* pDevicePort;
     tS8* pAppPath;
     tS8* pDerivePath;
-    tS8 SetToolNo;
+    tS8 SetCommToolNo;
     com_info_t comInfo;
     file_type_t fileType;
     uds_cfg_t udsCfg;

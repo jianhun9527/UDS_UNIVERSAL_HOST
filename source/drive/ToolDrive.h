@@ -10,7 +10,7 @@
  * @CreationTime : 2023-11-24 22:30:49
  * @Version       : V1.0
  * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-24 22:41:00
+ * @LastEditTime : 2023-11-24 22:55:14
  * @Description  : 
  ******************************************************************************/
 
@@ -63,8 +63,8 @@ typedef struct com_status_ctl
 typedef struct comm_tool
 {
     HANDLE mHand;
-    tS16 CommTool;
-    tS16 SetToolNo;
+    tS16 CommToolCnt;
+    tS16 SetCommToolNo;
     tU8 DevicePort[SP_NUM_MAX][SP_NAME_LEN_MAX];
     tU8 DeviceName[SP_NUM_MAX][SP_NAME_LEN_MAX];
     com_over_lap_t ComOvlpEvent;
