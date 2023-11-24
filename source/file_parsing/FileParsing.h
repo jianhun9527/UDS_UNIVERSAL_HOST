@@ -73,10 +73,10 @@ typedef struct com_info
 
 typedef struct config_file
 {
-    tS8* pSerialName;
+    tS8* pDevicePort;
     tS8* pAppPath;
     tS8* pDerivePath;
-    tS8 setSerialNo;
+    tS8 SetToolNo;
     com_info_t comInfo;
     file_type_t fileType;
     uds_cfg_t udsCfg;

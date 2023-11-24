@@ -5,19 +5,19 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\uart_drive\UartDrive.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\drive\ToolDrive.c
  * @Author       : jianhun
- * @CreationTime : 2023-10-15 14:47:33
+ * @CreationTime : 2023-11-24 22:31:02
  * @Version       : V1.0
- * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-09 15:19:34
- * @Description  : Serial port driver implementation
+ * @LastEditors  : jianhun
+ * @LastEditTime : 2023-11-24 22:31:23
+ * @Description  : 
  ******************************************************************************/
 
 /*******************************************************************************
 * Header file declaration
 *******************************************************************************/
-#include "UartDrive.h"
+#include "ToolDrive.h"
 #include <setupapi.h>
 #include <tchar.h>
 #include <conio.h>
@@ -54,7 +54,7 @@ static unsigned __stdcall ComSendThread(void* lpparam);
 static unsigned __stdcall ComRecvThread(void* lpparam)
 {
     DWORD WaitEventMask = 0, Bytes = 0, dwError = 0;
-    serial_port_t* pCtrl = (serial_port_t*)lpparam;
+    comm_tool_t* pCtrl = (comm_tool_t*)lpparam;
     WINBOOL Status = FALSE;
     COMSTAT cs;
 
@@ -102,7 +102,7 @@ static unsigned __stdcall ComRecvThread(void* lpparam)
 
 static unsigned __stdcall ComSendThread(void* lpparam)
 {
-    serial_port_t* pCtrl = (serial_port_t*)lpparam;
+    comm_tool_t* pCtrl = (comm_tool_t*)lpparam;
     DWORD Bytes = 0, dwError = 0;
     tU16 len = 0;
 
@@ -136,7 +136,7 @@ static unsigned __stdcall ComSendThread(void* lpparam)
 /*******************************************************************************
 * Function implementations      (scope: module-exported)
 *******************************************************************************/
-tS16 serial_port_scan(serial_port_t* _pctrl, const tS8* _pserialname)
+tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort)
 {
     // 返回设备集句柄
     HDEVINFO hDevInfo = SetupDiGetClassDevsA(NULL, NULL, NULL, DIGCF_PRESENT|DIGCF_ALLCLASSES);
@@ -166,30 +166,30 @@ tS16 serial_port_scan(serial_port_t* _pctrl, const tS8* _pserialname)
             continue;
 
         // 对比设备描述符
-        szName = strstr((const tS8*)szBuf, _pserialname);
+        szName = strstr((const tS8*)szBuf, _pDevicePort);
         if (szName == NULL)
             continue;
-        szName += strlen(_pserialname) + 1;
+        szName += strlen(_pDevicePort) + 1;
 
         // 提取串口号
         sscanf_s(szName, "(COM%[0-9])", numbuf, 4);
-        memcpy(&_pctrl->SerialName[_pctrl->SerialCnt][0], "\\\\.\\COM", 7);
-        memcpy(&_pctrl->SerialName[_pctrl->SerialCnt][7], numbuf, 4);
-        memcpy(&_pctrl->DeviceName[_pctrl->SerialCnt][0], szBuf, SP_NAME_LEN_MAX);
-        _pctrl->SerialCnt++;
+        memcpy(&_pctrl->DevicePort[_pctrl->CommTool][0], "\\\\.\\COM", 7);
+        memcpy(&_pctrl->DevicePort[_pctrl->CommTool][7], numbuf, 4);
+        memcpy(&_pctrl->DeviceName[_pctrl->CommTool][0], szBuf, SP_NAME_LEN_MAX);
+        _pctrl->CommTool++;
     }
 
     // 释放设备集句柄
     SetupDiDestroyDeviceInfoList(hDevInfo);
 
     LOG_INF("Serial CAN_LIN_Tool device search completed!");
-    if (_pctrl->SerialCnt == 0) {
+    if (_pctrl->CommTool == 0) {
         _pctrl->mHand = INVALID_HANDLE_VALUE;
         LOG_ERR("No CAN_LIN_Tool device connected!");
         return -1;
     } else {
         LOG_INF("CAN_LIN_Tool Device List:");
-        for (tU16 idx = 0; idx < _pctrl->SerialCnt; idx++)
+        for (tU16 idx = 0; idx < _pctrl->CommTool; idx++)
             LOG_INF("No: %d - %s", idx, _pctrl->DeviceName[idx]);
         printf("====================================================================\r\n");
     }
@@ -197,11 +197,11 @@ tS16 serial_port_scan(serial_port_t* _pctrl, const tS8* _pserialname)
 	return 0;
 }
 
-tS16 serial_port_open(serial_port_t* _pctrl, tU8 _size)
+tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size)
 {
     // Use the CreateFile function to open the serial port
     _pctrl->mHand = CreateFile(
-        (LPCSTR)_pctrl->SerialName[_pctrl->SetSerialNo],    // 串口名称
+        (LPCSTR)_pctrl->DevicePort[_pctrl->SetToolNo],    // 串口名称
         GENERIC_READ | GENERIC_WRITE,                       // 读写权限
         0,                                                  // 共享模式（0表示不共享）
         NULL,                                               // 安全属性（默认）
@@ -333,7 +333,7 @@ tS16 serial_port_open(serial_port_t* _pctrl, tU8 _size)
     return 0;
 }
 
-tS16 serial_port_close(serial_port_t* _pctrl)
+tS16 comm_tool_close(comm_tool_t* _pctrl)
 {
     set_fifo_destroy(&_pctrl->ComDataFifo.UartRxMsg);
     set_fifo_destroy(&_pctrl->ComDataFifo.UartTxMsg);
@@ -358,7 +358,7 @@ tS16 serial_port_close(serial_port_t* _pctrl)
     return 0;
 }
 
-tS16 serial_port_send_data(serial_port_t* _pctrl, tU8* _pdata, tU8 _size)
+tS16 comm_tool_send_data(comm_tool_t* _pctrl, tU8* _pdata, tU8 _size)
 {
     tU8 data[32] = {0};
     
@@ -372,7 +372,7 @@ tS16 serial_port_send_data(serial_port_t* _pctrl, tU8* _pdata, tU8 _size)
     return 0;
 }
 
-tS16 serial_port_rece_data(serial_port_t* _pctrl, tU8* _pdata, tU8* _size)
+tS16 comm_tool_rece_data(comm_tool_t* _pctrl, tU8* _pdata, tU8* _size)
 {
     tU16 len = _pctrl->ComDataFifo.Size;
     tU8 data[32] = {0};

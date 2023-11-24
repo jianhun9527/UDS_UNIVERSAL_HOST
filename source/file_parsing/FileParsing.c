@@ -490,8 +490,8 @@ tS16 parsing_config_file(const tS8* _pininame, config_file_t* const _pctrl)
         return -1;
     }
     
-    _pctrl->pSerialName = (tS8*)iniparser_getstring(iniFileDir, "SYS_CONFIG:SERIAL_NAME", NULL);
-    if (_pctrl->pSerialName == NULL) {
+    _pctrl->pDevicePort = (tS8*)iniparser_getstring(iniFileDir, "SYS_CONFIG:SERIAL_NAME", NULL);
+    if (_pctrl->pDevicePort == NULL) {
         LOG_ERR("Device identifier is not defined in the configuration file!");
         return -2;
     }
@@ -501,7 +501,7 @@ tS16 parsing_config_file(const tS8* _pininame, config_file_t* const _pctrl)
         LOG_ERR("The device number currently being used is not defined in the configuration file!");
         return -3;
     }
-    _pctrl->setSerialNo = atoi(pStrTmp);
+    _pctrl->SetToolNo = atoi(pStrTmp);
 
     pStrTmp = (tS8*)iniparser_getstring(iniFileDir, "SYS_CONFIG:COM_TYPE", NULL);
     if (pStrTmp == NULL) {

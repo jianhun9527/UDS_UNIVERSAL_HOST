@@ -90,14 +90,14 @@ int main(int argc, char const *argv[])
     switch (configFile.comInfo.comType)
     {
     case COM_CAN:
-        if (!set_can_device_init(configFile.pSerialName, CAN_TERMIAL_RESISTOR_ENABLE,
+        if (!set_can_device_init(configFile.pDevicePort, CAN_TERMIAL_RESISTOR_ENABLE,
             configFile.comInfo.comBaud.value)) {
             boot_communction_process(fileInfoTab, &configFile);
         }
         set_can_device_deinit();
     break;
     case COM_LIN:
-        if (!set_lin_device_init(configFile.pSerialName, configFile.comInfo.comBaud.value)) {
+        if (!set_lin_device_init(configFile.pDevicePort, configFile.comInfo.comBaud.value)) {
             boot_communction_process(fileInfoTab, &configFile);
         }
         set_lin_device_deinit();

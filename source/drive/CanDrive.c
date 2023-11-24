@@ -52,7 +52,7 @@ typedef union can_frame
 /*******************************************************************************
 * Global variable definitions   (scope: module-local)
 *******************************************************************************/
-serial_port_t serialPort = {0};
+comm_tool_t commTool = {0};
 
 /*******************************************************************************
 * Global variable definitions   (scope: module-exported)
@@ -77,7 +77,7 @@ static tS16 set_can_terminal_resistor(tr_status_t _state)
 
     buff[1] = _state == Enable ? 0x01 : 0x02;
 
-    return serial_port_send_data(&serialPort, buff, 2);
+    return comm_tool_send_data(&commTool, buff, 2);
 }
 
 static tS16 set_can_baudrate(tU16 _baudrate)
@@ -131,7 +131,7 @@ static tS16 set_can_baudrate(tU16 _baudrate)
     break;
     }
 
-    return serial_port_send_data(&serialPort, buff, 11);
+    return comm_tool_send_data(&commTool, buff, 11);
 }
 
 /*******************************************************************************
@@ -139,10 +139,10 @@ static tS16 set_can_baudrate(tU16 _baudrate)
 *******************************************************************************/
 tS16 set_can_device_init(const tS8* pcanname, tS8 _trstate, tU16 _baudrate)
 {
-    memset(&serialPort, 0, sizeof(serialPort));
+    memset(&commTool, 0, sizeof(commTool));
 
-    if (serial_port_scan(&serialPort, pcanname)) return -1;
-    if (serial_port_open(&serialPort, 20)) return -2;
+    if (comm_tool_scan(&commTool, pcanname)) return -1;
+    if (comm_tool_open(&commTool, 20)) return -2;
 
     LOG_INF("Start Configure CAN device!");
     if (set_can_terminal_resistor((tr_status_t)_trstate)) {
@@ -166,17 +166,17 @@ tS16 set_can_device_init(const tS8* pcanname, tS8 _trstate, tU16 _baudrate)
 
 tS16 set_can_device_deinit(void)
 {
-    serialPort.ComStateCtl.ReceEnable = FALSE;
-    serialPort.ComStateCtl.SendEnable = FALSE;
+    commTool.ComStateCtl.ReceEnable = FALSE;
+    commTool.ComStateCtl.SendEnable = FALSE;
     LOG_INF("Successfully stop CAN communication!");
-    return serial_port_close(&serialPort);
+    return comm_tool_close(&commTool);
 }
 
 tS16 can_frame_send(can_frame_msg_t* frame)
 {
     can_frame_t canframe;
 
-    if (INVALID_HANDLE_VALUE != serialPort.mHand) {
+    if (INVALID_HANDLE_VALUE != commTool.mHand) {
         memset(canframe.msgData, 0, sizeof(canframe));
         canframe.msg.command = 1;
 
@@ -203,7 +203,7 @@ tS16 can_frame_send(can_frame_msg_t* frame)
 
         memcpy(canframe.msg.data, frame->data, frame->dlc);
         
-        return serial_port_send_data(&serialPort, canframe.msgData, 20);
+        return comm_tool_send_data(&commTool, canframe.msgData, 20);
     } else {
         LOG_ERR("Can device is not initialized or initialization failed!");
         return CAN_DERIVE_INITIAL_FAIL;
@@ -215,9 +215,9 @@ tS16 can_frame_read(can_frame_msg_t* frame)
     can_frame_t canframe;
     tU8 recvsize = 20;
 
-    if (INVALID_HANDLE_VALUE != serialPort.mHand) {
+    if (INVALID_HANDLE_VALUE != commTool.mHand) {
         memset(&canframe, 0, sizeof(canframe));
-        if (!serial_port_rece_data(&serialPort, canframe.msgData, &recvsize) && recvsize == 20) {
+        if (!comm_tool_rece_data(&commTool, canframe.msgData, &recvsize) && recvsize == 20) {
             if (canframe.msg.command == 1) {
                 if (canframe.msg.id_type == CAN_ID_TYPE_STANDARD) {
                     frame->id_type = CAN_ID_TYPE_STANDARD;
@@ -252,7 +252,7 @@ tS16 can_frame_read(can_frame_msg_t* frame)
 
 tS16 wait_can_frame_send_complete(void)
 {
-    while (FALSE == serialPort.ComDataFifo.TXEmpty) Sleep(0);
+    while (FALSE == commTool.ComDataFifo.TXEmpty) Sleep(0);
     
     return 0;
 }

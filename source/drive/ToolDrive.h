@@ -5,17 +5,17 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\uart_drive\UartDrive.h
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\drive\ToolDrive.h
  * @Author       : jianhun
- * @CreationTime : 2023-10-15 14:47:49
+ * @CreationTime : 2023-11-24 22:30:49
  * @Version       : V1.0
  * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-20 00:21:43
- * @Description  : Serial driver header file
+ * @LastEditTime : 2023-11-24 22:41:00
+ * @Description  : 
  ******************************************************************************/
 
-#ifndef __UARTDRIVE_H__
-#define __UARTDRIVE_H__
+#ifndef __TOOLDRIVE_H__
+#define __TOOLDRIVE_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,17 +60,17 @@ typedef struct com_status_ctl
     WINBOOL SendEnable;
 } com_status_ctl_t;
 
-typedef struct serial_port
+typedef struct comm_tool
 {
     HANDLE mHand;
-    tS16 SerialCnt;
-    tS16 SetSerialNo;
-    tU8 SerialName[SP_NUM_MAX][SP_NAME_LEN_MAX];
+    tS16 CommTool;
+    tS16 SetToolNo;
+    tU8 DevicePort[SP_NUM_MAX][SP_NAME_LEN_MAX];
     tU8 DeviceName[SP_NUM_MAX][SP_NAME_LEN_MAX];
     com_over_lap_t ComOvlpEvent;
     com_fifo_data_t ComDataFifo;
     com_status_ctl_t ComStateCtl;
-} serial_port_t;
+} comm_tool_t;
 
 // UDS地址定义
 typedef struct uds_data
@@ -91,11 +91,11 @@ typedef struct uds_data
 /*******************************************************************************
 * Exported function prototypes
 *******************************************************************************/
-extern tS16 serial_port_scan(serial_port_t* _pctrl, const tS8* _pserialname);
-extern tS16 serial_port_open(serial_port_t* _pctrl, tU8 _size);
-extern tS16 serial_port_close(serial_port_t* _pCtrl);
-extern tS16 serial_port_send_data(serial_port_t* _pctrl, tU8* _pdata, tU8 _size);
-extern tS16 serial_port_rece_data(serial_port_t* _pctrl, tU8* _pdata, tU8* _size);
+extern tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort);
+extern tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size);
+extern tS16 comm_tool_close(comm_tool_t* _pCtrl);
+extern tS16 comm_tool_send_data(comm_tool_t* _pctrl, tU8* _pdata, tU8 _size);
+extern tS16 comm_tool_rece_data(comm_tool_t* _pctrl, tU8* _pdata, tU8* _size);
 
 /*******************************************************************************
 * Inline functions
@@ -105,4 +105,4 @@ extern tS16 serial_port_rece_data(serial_port_t* _pctrl, tU8* _pdata, tU8* _size
 }
 #endif
 
-#endif // __UARTDRIVE_H__
+#endif // __TOOLDRIVE_H__
