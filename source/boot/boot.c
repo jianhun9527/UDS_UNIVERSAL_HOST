@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\boot\boot.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\boot\boot.c
  * @Author       : jianhun
  * @CreationTime : 2023-10-27 03:21:52
  * @Version       : V1.0
  * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-15 01:28:49
+ * @LastEditTime : 2023-11-27 01:21:13
  * @Description  : 
  ******************************************************************************/
 
@@ -206,10 +206,10 @@ static tU32 WINAPI boot_thread(LPVOID _pdata)
         if (((uds_step_fun_t)funStepList[step].runFun)(dSend, step, &udsdata, &comdata)) break;
         write_data_log(udsdata.ReqID, udsdata.pData, udsdata.DataLen, DATA_SEND_PROCESS);
 
-        // uds can send message
+        // uds send message
         state = pthreadinfo->pComUdsRequest(&udsdata);
         if (state) {
-            LOG_ERR("CAN uds request failed, error code: %d", state);
+            LOG_ERR("UDS request failed, error code: %d", state);
             write_data_log(udsdata.ReqID, (tU8*)(&state), 1, DATA_ERROR_PROCESS);
             break;
 #ifdef DBG_TX_STREAM
@@ -230,7 +230,7 @@ static tU32 WINAPI boot_thread(LPVOID _pdata)
                 Sleep(10);
                 break;
             }
-            // uds can receive message
+            // uds receive message
             udsdata.DataLen = UDS_DATA_SIZE_MAX;
             state = pthreadinfo->pComUdsresponse(&udsdata, timeout);
             if (state) {
