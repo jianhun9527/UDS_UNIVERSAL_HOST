@@ -39,4 +39,4 @@ SET(SRC_LIST ${SRC1_LIST} ${SRC2_LIST} ${SRC3_LIST} ${SRC4_LIST} ${SRC5_LIST} ${
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/debug)
 
 add_executable(UDS_Universal_Host ${SRC_LIST} ${ICON_FILE})
-target_link_libraries(UDS_Universal_Host setupapi.lib GenerateKey.dll iniparser.dll)
+target_link_libraries(UDS_Universal_Host hidapi.dll GenerateKey.dll iniparser.dll)

@@ -518,7 +518,7 @@ tS16 parsing_config_file(const tS8* _pininame, config_file_t* const _pctrl)
         if (idx == COM_TYPE_MAX) {
             LOG_ERR("Please configure a valid communication method!");
             return -5;
-        } else if (idx >= COM_PWM) {
+        } else if (idx >= COM_PWM || idx <= COM_CAN) {
             LOG_ERR("The toolbox does not currently support this communication method -> %s", comDataDict[idx].feature);
             return -6;
         }

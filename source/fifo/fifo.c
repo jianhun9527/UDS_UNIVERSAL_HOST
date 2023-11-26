@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\fifo\fifo.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\fifo\fifo.c
  * @Author       : jianhun
  * @CreationTime : 2023-11-03 23:41:19
  * @Version       : V1.0
  * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-12 23:00:00
+ * @LastEditTime : 2023-11-26 22:31:25
  * @Description  : 
  ******************************************************************************/
 
@@ -106,7 +106,7 @@ tS16 set_fifo_write(msg_fifo_t* _pmf, tU8* _pdata, tU16 _len)
         _pmf->State = FIFO_VALID;
     }
 
-    if (_len + rearaddr<= endaddr) {
+    if (_len + rearaddr <= endaddr) {
         memcpy(_pmf->Buff + rearaddr, _pdata, _len);
     } else {
         memcpy(_pmf->Buff + rearaddr, _pdata, endaddr - rearaddr);
