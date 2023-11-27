@@ -188,11 +188,11 @@ static tU8 get_lin_checksum(tU8* _pdata, tU8 _nsize)
 /*******************************************************************************
 * Function implementations      (scope: module-exported)
 *******************************************************************************/
-tS16 set_lin_device_init(const tS8* _pcanname, tU16 _baudrate)
+tS16 set_lin_device_init(const config_file_t* _pCfg)
 {
     memset(&CommToolCnt, 0, sizeof(CommToolCnt));
 
-    if (comm_tool_scan(&CommToolCnt, _pcanname)) return -1;
+    if (comm_tool_scan(&CommToolCnt, _pCfg->pDevicePort)) return -1;
     if (comm_tool_open(&CommToolCnt, 13)) return -2;
 
     LOG_INF("Start Configure lin device!");
@@ -200,12 +200,12 @@ tS16 set_lin_device_init(const tS8* _pcanname, tU16 _baudrate)
         LOG_ERR("Failed to configure lin running mode!");
         return -3;
     }
-    if (set_lin_baudrate(_baudrate)) {
+    if (set_lin_baudrate(_pCfg->comInfo.comBaud.value)) {
         LOG_ERR("Failed to configure lin baud rate!");
         return -4;
     }
     LOG_INF("Configure lin running mode -> Master");
-    LOG_INF("Configure lin baud rate    -> %d", _baudrate);
+    LOG_INF("Configure lin baud rate    -> %d", _pCfg->comInfo.comBaud.value);
     printf("====================================================================\r\n");
 
     return 0;

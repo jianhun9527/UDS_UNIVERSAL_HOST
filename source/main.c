@@ -5,19 +5,18 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\main.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\main.c
  * @Author       : jianhun
  * @CreationTime : 2023-06-25 23:13:28
  * @Version      : V1.0
- * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-12 23:05:20
+ * @LastEditors  : JF.Cheng
+ * @LastEditTime : 2023-11-27 21:54:50
  * @Description  : 
  ******************************************************************************/
 
 /*******************************************************************************
 * Header file declaration
 *******************************************************************************/
-#include "FileParsing.h"
 #include "CanUds.h"
 #include "LinUds.h"
 #include "boot.h"
@@ -90,14 +89,13 @@ int main(int argc, char const *argv[])
     switch (configFile.comInfo.comType)
     {
     case COM_CAN:
-        if (!set_can_device_init(configFile.pDevicePort, CAN_TERMIAL_RESISTOR_ENABLE,
-            configFile.comInfo.comBaud.value)) {
+        if (!set_can_device_init(&configFile)) {
             boot_communction_process(fileInfoTab, &configFile);
         }
         set_can_device_deinit();
     break;
     case COM_LIN:
-        if (!set_lin_device_init(configFile.pDevicePort, configFile.comInfo.comBaud.value)) {
+        if (!set_lin_device_init(&configFile)) {
             boot_communction_process(fileInfoTab, &configFile);
         }
         set_lin_device_deinit();

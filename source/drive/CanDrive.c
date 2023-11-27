@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\uds_can\CanDrive.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\drive\CanDrive.c
  * @Author       : jianhun
  * @CreationTime : 2023-10-21 23:13:48
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-19 17:54:01
+ * @LastEditTime : 2023-11-27 21:45:13
  * @Description  : 
  ******************************************************************************/
 
@@ -63,6 +63,7 @@ comm_tool_t CommToolCnt = {0};
 *******************************************************************************/
 static tS16 set_can_terminal_resistor(tr_status_t _state);
 static tS16 set_can_baudrate(tU16 _baudrate);
+static tS16 set_can_recv_filter(tU32 _id);
 
 /*******************************************************************************
 * Function prototypes           (scope: module-exported)
@@ -134,31 +135,68 @@ static tS16 set_can_baudrate(tU16 _baudrate)
     return comm_tool_send_data(&CommToolCnt, buff, 11);
 }
 
+static tS16 set_can_recv_filter(tU32 _id)
+{
+    tU8 filtertab[10] = {0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+    tU8 idx = 0;
+    
+    for (idx = 0; idx < 14; idx ++)
+    {
+        filtertab[3] = idx;
+        if (0 == idx) {
+            filtertab[4] = 1;
+            filtertab[6] = (tU8)(_id >> 0);
+            filtertab[7] = (tU8)(_id >> 8);
+            filtertab[8] = (tU8)(_id >> 16);
+            filtertab[9] = (tU8)(_id >> 24);
+        } else {
+            filtertab[4] = 0;
+            filtertab[6] = 0;
+            filtertab[7] = 0;
+            filtertab[8] = 0;
+            filtertab[9] = 0;
+        }
+        if (comm_tool_send_data(&CommToolCnt, filtertab, 10)) break;
+    }
+    if (idx != 14) return -1;
+    filtertab[2] = 0x06;
+
+    return comm_tool_send_data(&CommToolCnt, filtertab, 3);
+}
+
 /*******************************************************************************
 * Function implementations      (scope: module-exported)
 *******************************************************************************/
-tS16 set_can_device_init(const tS8* pcanname, tS8 _trstate, tU16 _baudrate)
+tS16 set_can_device_init(const config_file_t* _pCfg)
 {
+    tr_status_t state = Enable;
+
     memset(&CommToolCnt, 0, sizeof(CommToolCnt));
 
-    if (comm_tool_scan(&CommToolCnt, pcanname)) return -1;
+    CommToolCnt.CommToolNo = _pCfg->setCommToolNo;
+    if (comm_tool_scan(&CommToolCnt, _pCfg->pDevicePort)) return -1;
     if (comm_tool_open(&CommToolCnt, 20)) return -2;
 
     LOG_INF("Start Configure CAN device!");
-    if (set_can_terminal_resistor((tr_status_t)_trstate)) {
+    if (set_can_terminal_resistor(state)) {
         LOG_ERR("Failed to configure CAN terminal resistor!");
         return -3;
     }
-    if (set_can_baudrate(_baudrate)) {
+    if (set_can_baudrate(_pCfg->comInfo.comBaud.value)) {
         LOG_ERR("Failed to configure can baud rate!");
         return -4;
     }
-    if ((tr_status_t)_trstate == Enable) {
+    if (set_can_recv_filter(_pCfg->udsCfg.resDiagID)) {
+        LOG_ERR("Failed to configure can id filtering!");
+        return -5;
+    }
+    LOG_INF("Configure can id filtering      -> Enable");
+    if (state == Enable) {
         LOG_INF("Configure can terminal resistor -> Enable");
     } else {
         LOG_INF("Configure can terminal resistor -> Disable");
     }
-    LOG_INF("Configure can baud rate         -> %dk", _baudrate);
+    LOG_INF("Configure can baud rate         -> %dk", _pCfg->comInfo.comBaud.value);
     printf("====================================================================\r\n");
 
     return 0;

@@ -201,7 +201,7 @@ tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size)
 {
     // Use the CreateFile function to open the serial port
     _pctrl->mHand = CreateFile(
-        (LPCSTR)_pctrl->DevicePort[_pctrl->SetCommToolNo],    // 串口名称
+        (LPCSTR)_pctrl->DevicePort[_pctrl->CommToolNo],    // 串口名称
         GENERIC_READ | GENERIC_WRITE,                       // 读写权限
         0,                                                  // 共享模式（0表示不共享）
         NULL,                                               // 安全属性（默认）

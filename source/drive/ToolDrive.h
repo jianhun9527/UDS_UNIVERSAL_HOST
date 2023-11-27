@@ -64,7 +64,7 @@ typedef struct comm_tool
 {
     HANDLE mHand;
     tS16 CommToolCnt;
-    tS16 SetCommToolNo;
+    tS16 CommToolNo;
     tU8 DevicePort[SP_NUM_MAX][SP_NAME_LEN_MAX];
     tU8 DeviceName[SP_NUM_MAX][SP_NAME_LEN_MAX];
     com_over_lap_t ComOvlpEvent;
