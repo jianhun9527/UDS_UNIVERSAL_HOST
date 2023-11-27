@@ -10,7 +10,7 @@
  * @CreationTime : 2023-10-21 23:16:36
  * @Version       : V1.0
  * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-27 01:05:04
+ * @LastEditTime : 2023-11-28 01:00:31
  * @Description  : 
  ******************************************************************************/
 
@@ -426,15 +426,16 @@ static tS16 set_lin_state(lin_status_t _state, tU16 _baudrate)
 /*******************************************************************************
 * Function implementations      (scope: module-exported)
 *******************************************************************************/
-tS16 set_lin_device_init(const tS8* _pcanname, tU16 _baudrate)
+tS16 set_lin_device_init(const config_file_t* _pCfg)
 {
     memset(&CommToolCnt, 0, sizeof(CommToolCnt));
 
-    if (comm_tool_scan(&CommToolCnt, _pcanname)) return -1;
+    CommToolCnt.CommToolNo = _pCfg->setCommToolNo;
+    if (comm_tool_scan(&CommToolCnt, _pCfg->pDevicePort)) return -1;
     if (comm_tool_open(&CommToolCnt, 28)) return -2;
 
     LOG_INF("Start Configure lin device!");
-    if (set_lin_state(Lin_Master, _baudrate)) return -3;
+    if (set_lin_state(Lin_Master, _pCfg->comInfo.comBaud.value)) return -3;
     printf("====================================================================\r\n");
 
     return 0;
@@ -587,6 +588,7 @@ tS16 lin_frame_master_read(lin_frame_msg_t* _frame)
                      LIN_MASTER_RECV_ENHANCE_CHECKSUM == recvframe.datacmd.master_result)) {
                     break;
                 } else {
+                    if (recvframe.datacmd.master_result == LIN_MASTER_RECV_TIMEOUT) continue;
                     goto __FAIL_RECV_DATA;
                 }
             }
@@ -600,6 +602,9 @@ tS16 lin_frame_master_read(lin_frame_msg_t* _frame)
     
     switch(recvframe.datacmd.master_result)
     {
+    case LIN_MASTER_RECV_SUCCESS:
+    case LIN_MASTER_RECV_TIMEOUT:
+    break;
     case LIN_MASTER_RECV_STANDARD_CHECKSUM:
         _frame->crc_check_status = LIN_DATA_STANDARD_CHECKSUM;
     break;
@@ -612,7 +617,7 @@ tS16 lin_frame_master_read(lin_frame_msg_t* _frame)
         return LIN_READ_CHECKSUM_ERR;
     break;
     default:
-       return LIN_UNKNOW_ERR;
+        return LIN_UNKNOW_ERR;
     break;
     }
 
@@ -624,7 +629,6 @@ tS16 lin_frame_master_read(lin_frame_msg_t* _frame)
     return 0;
 
 __FAIL_RECV_DATA:
-    LOG_ERR("LIN data reading failed!");
     return LIN_READ_FAIL;
 }
 

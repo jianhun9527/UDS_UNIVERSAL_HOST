@@ -73,6 +73,10 @@
 2. 期望能实现TSMaster的支持
 
 
+### 231128 ZM_USB_LIN
+1. 应用层向CAN_LIN_Tool分支看齐
+
+
 ### 待实现功能
 N/A
 

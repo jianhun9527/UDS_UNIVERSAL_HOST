@@ -24,6 +24,7 @@ extern "C" {
 /*******************************************************************************
 * Header file declaration
 *******************************************************************************/
+#include "FileParsing.h"
 #include "ToolDrive.h"
 
 /*******************************************************************************
@@ -64,7 +65,7 @@ typedef struct can_frame_msg
 /*******************************************************************************
 * Exported function prototypes
 *******************************************************************************/
-extern tS16 set_can_device_init(const tS8* pcanname, tS8 _trstate, tU16 _baudrate);
+extern tS16 set_can_device_init(const config_file_t* _pCfg);
 extern tS16 set_can_device_deinit(void);
 extern tS16 can_frame_send(can_frame_msg_t* frame);
 extern tS16 can_frame_read(can_frame_msg_t* frame);

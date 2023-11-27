@@ -165,7 +165,7 @@ tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort)
 
 tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size)
 {
-     _pctrl->mHand = hid_open_path(_pctrl->DevicePort[_pctrl->SetCommToolNo]);
+     _pctrl->mHand = hid_open_path(_pctrl->DevicePort[_pctrl->CommToolNo]);
     if (INVALID_HANDLE_VALUE == _pctrl->mHand) {
         LOG_ERR("Failed opened the ZM_USB_LIN device!");
         return -1;

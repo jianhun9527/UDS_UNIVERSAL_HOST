@@ -59,7 +59,7 @@ typedef struct comm_tool
 {
     HANDLE mHand;
     tS16 CommToolCnt;
-    tS16 SetCommToolNo;
+    tS16 CommToolNo;
     tS8 DevicePort[SP_NUM_MAX][SP_NAME_LEN_MAX];
     tS8 DeviceName[SP_NUM_MAX][SP_NAME_LEN_MAX];
     com_fifo_data_t ComDataFifo;

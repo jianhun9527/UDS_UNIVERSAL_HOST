@@ -24,6 +24,7 @@ extern "C" {
 /*******************************************************************************
 * Header file declaration
 *******************************************************************************/
+#include "FileParsing.h"
 #include "ToolDrive.h"
 
 /*******************************************************************************
@@ -64,7 +65,7 @@ typedef struct lin_data
 /*******************************************************************************
 * Exported function prototypes
 *******************************************************************************/
-extern tS16 set_lin_device_init(const tS8* _pcanname, tU16 _baudrate);
+extern tS16 set_lin_device_init(const config_file_t* _pCfg);
 extern tS16 set_lin_device_deinit(void);
 extern tS16 lin_frame_master_write(lin_frame_msg_t* _frame);
 extern tS16 lin_frame_master_read(lin_frame_msg_t* _frame);

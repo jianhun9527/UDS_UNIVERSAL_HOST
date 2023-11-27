@@ -10,7 +10,7 @@
  * @CreationTime : 2023-10-21 23:13:48
  * @Version       : V1.0
  * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-25 14:35:27
+ * @LastEditTime : 2023-11-28 00:48:26
  * @Description  : 
  ******************************************************************************/
 
@@ -72,12 +72,10 @@ typedef union can_frame
 /*******************************************************************************
 * Function implementations      (scope: module-exported)
 *******************************************************************************/
-tS16 set_can_device_init(const tS8* pcanname, tS8 _trstate, tU16 _baudrate)
+tS16 set_can_device_init(const config_file_t* _pCfg)
 {
-    (void)pcanname;
-    (void)_trstate;
-    (void)_baudrate;
-
+    (void)_pCfg;
+    
     LOG_ERR("This device does not support the current communication method!");
     return TOOL_FUNCTION_NOT_SUPPORT;
 }
