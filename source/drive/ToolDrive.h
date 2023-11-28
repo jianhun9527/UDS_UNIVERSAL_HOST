@@ -9,8 +9,8 @@
  * @Author       : jianhun
  * @CreationTime : 2023-11-24 22:30:49
  * @Version       : V1.0
- * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-24 22:55:14
+ * @LastEditors  : JF.Cheng
+ * @LastEditTime : 2023-11-29 01:39:20
  * @Description  : 
  ******************************************************************************/
 
@@ -30,46 +30,17 @@ extern "C" {
 /*******************************************************************************
 * Defines and macros            (scope: global)
 *******************************************************************************/
-#define SP_NUM_MAX          5
-#define SP_NAME_LEN_MAX     50
-#define UART_SEND_BUFF_MAX  256
-#define UART_RECE_BUFF_MAX  32
+#define SP_NUM_MAX          10
 
 /*******************************************************************************
 * Typedefs and structures       (scope: global)
 *******************************************************************************/
-typedef struct com_over_lap
-{
-    LPOVERLAPPED pOvReadEvent;
-    LPOVERLAPPED pOvWaitEvent;
-    LPOVERLAPPED pOvWriteEvent;
-} com_over_lap_t;
-
-typedef struct com_fifo_data
-{
-    msg_fifo_t UartRxMsg;
-    msg_fifo_t UartTxMsg;
-    WINBOOL RxEmpty;
-    WINBOOL TXEmpty;
-    tU8 Size;
-} com_fifo_data_t;
-
-typedef struct com_status_ctl
-{
-    WINBOOL ReceEnable;
-    WINBOOL SendEnable;
-} com_status_ctl_t;
-
 typedef struct comm_tool
 {
-    HANDLE mHand;
+    tS32 mHand;
     tS16 CommToolCnt;
     tS16 CommToolNo;
-    tU8 DevicePort[SP_NUM_MAX][SP_NAME_LEN_MAX];
-    tU8 DeviceName[SP_NUM_MAX][SP_NAME_LEN_MAX];
-    com_over_lap_t ComOvlpEvent;
-    com_fifo_data_t ComDataFifo;
-    com_status_ctl_t ComStateCtl;
+    tS32 DevicePort[SP_NUM_MAX];
 } comm_tool_t;
 
 // UDS地址定义
@@ -95,7 +66,7 @@ extern tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort);
 extern tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size);
 extern tS16 comm_tool_close(comm_tool_t* _pCtrl);
 extern tS16 comm_tool_send_data(comm_tool_t* _pctrl, tU8* _pdata, tU8 _size);
-extern tS16 comm_tool_rece_data(comm_tool_t* _pctrl, tU8* _pdata, tU8* _size);
+extern tS16 comm_tool_rece_data(comm_tool_t* _pctrl, tU8* _pdata, tU8* _psize);
 
 /*******************************************************************************
 * Inline functions

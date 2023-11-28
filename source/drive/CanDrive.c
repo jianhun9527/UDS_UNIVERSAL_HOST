@@ -10,14 +10,16 @@
  * @CreationTime : 2023-10-21 23:13:48
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-27 21:45:13
+ * @LastEditTime : 2023-11-29 02:06:57
  * @Description  : 
  ******************************************************************************/
 
 /*******************************************************************************
 * Header file declaration
 *******************************************************************************/
+#include "usb2canfd.h"
 #include "CanDrive.h"
+#include "usb2can.h"
 
 /*******************************************************************************
 * Defines and macros            (scope: module-local)
@@ -61,8 +63,7 @@ comm_tool_t CommToolCnt = {0};
 /*******************************************************************************
 * Function prototypes           (scope: module-local)
 *******************************************************************************/
-static tS16 set_can_terminal_resistor(tr_status_t _state);
-static tS16 set_can_baudrate(tU16 _baudrate);
+static tS16 set_can_baudrate(tS16 _mhand, tU16 _baudrate);
 static tS16 set_can_recv_filter(tU32 _id);
 
 /*******************************************************************************
@@ -72,64 +73,51 @@ static tS16 set_can_recv_filter(tU32 _id);
 /*******************************************************************************
 * Function implementations      (scope: module-local)
 *******************************************************************************/
-static tS16 set_can_terminal_resistor(tr_status_t _state)
+static tS16 set_can_baudrate(tS16 _mhand, tU16 _baudrate)
 {
-    tU8 buff[2] = {0x06, 0x00};
+    if ((_mhand & 0xFF000000) == 0x53000000) {
+        CANFD_INIT_CONFIG canfd_config;
 
-    buff[1] = _state == Enable ? 0x01 : 0x02;
-
-    return comm_tool_send_data(&CommToolCnt, buff, 2);
-}
-
-static tS16 set_can_baudrate(tU16 _baudrate)
-{
-    tU8 buff[11] = {0x03, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00};
-
-    switch (_baudrate)
-    {
-    case 500:
-        buff[2] = 0xF4, buff[3] = 0x01, buff[6] = 0x12;
-    break;
-    case 1000:
-        buff[2] = 0xE8, buff[3] = 0x03, buff[6] = 0x09;
-    break;
-    case 100:
-        buff[2] = 0x64, buff[6] = 0x5A;
-    break;
-    case 125:
-        buff[2] = 0x7D, buff[6] = 0x48;
-    break;
-    case 200:
-        buff[2] = 0xC8, buff[6] = 0x2D;
-    break;
-    case 250:
-        buff[2] = 0xFA, buff[6] = 0x24;
-    break;
-    case 400:
-        buff[2] = 0x90, buff[3] = 0x01, buff[6] = 0x12, buff[9] = 0x07;
-    break;
-    case 666:
-        buff[2] = 0x9A, buff[3] = 0x02, buff[6] = 0x0B, buff[9] = 0x07;
-    break;
-    case 800:
-        buff[2] = 0x20, buff[3] = 0x03, buff[6] = 0x09, buff[9] = 0x07;
-    break;
-    case 20:
-        buff[2] = 0x14, buff[6] = 0xC2, buff[7] = 0x01;
-    break;
-    case 40:
-        buff[2] = 0x28, buff[6] = 0xE1;
-    break;
-    case 50:
-        buff[2] = 0x32, buff[6] = 0xB4;
-    break;
-    case 80:
-        buff[2] = 0x50, buff[6] = 0x71;
-    break;
-    default:
-        LOG_ERR("The baud rate configuration is wrong and the current baud rate cannot be set!");
-        return -2;
-    break;
+        if (CANFD_SUCCESS != CANFD_GetCANSpeedArg(_mhand, &canfd_config, _baudrate * 1000, )) {
+            return -1;
+        }
+        canfd_config.Mode = 0;
+        canfd_config.RetrySend = 1;  
+        canfd_config.ISOCRCEnable = 1;
+        canfd_config.ResEnable = 1;   
+        canfd_config.NBT_BRP = 1;
+        canfd_config.NBT_SEG1 = 63;
+        canfd_config.NBT_SEG2 = 16;
+        canfd_config.NBT_SJW = 16;
+        canfd_config.DBT_BRP = 1;
+        canfd_config.DBT_SEG1 = 15;
+        canfd_config.DBT_SEG2 = 4;
+        canfd_config.DBT_SJW = 4;
+        if (CANFD_SUCCESS != CANFD_Init(_mhand, 0, &canfd_config)) {
+            return -1;
+        }
+    } else {
+        CAN_INIT_CONFIG can_config;
+        
+        if (CAN_SUCCESS != CAN_GetCANSpeedArg(_mhand, &can_config, _baudrate * 1000)) {
+            return -2;
+        }
+        CAN_GetCANSpeedArg(DevHandle[0],&CANConfig,500000);
+        can_config.CAN_Mode = 0x80;//正常模式，接入终端电阻
+        can_config.CAN_ABOM = 0;//禁止自动离线
+        can_config.CAN_NART = 0;//使能报文重传
+        can_config.CAN_RFLM = 0;//FIFO满之后覆盖旧报文
+        can_config.CAN_TXFP = 1;//发送请求决定发送顺序
+        //配置波特率，配置为500K
+        can_config.CAN_BRP = 4;
+        can_config.CAN_BS1 = 15;
+        can_config.CAN_BS2 = 5;
+        can_config.CAN_SJW = 2;
+        ret = CAN_Init(device->handle[device->indexSlave],device->indexMaster,&can_config);
+        if(ret != CAN_SUCCESS){
+            return 0;
+        }else{
+        }
     }
 
     return comm_tool_send_data(&CommToolCnt, buff, 11);
@@ -169,20 +157,14 @@ static tS16 set_can_recv_filter(tU32 _id)
 *******************************************************************************/
 tS16 set_can_device_init(const config_file_t* _pCfg)
 {
-    tr_status_t state = Enable;
-
     memset(&CommToolCnt, 0, sizeof(CommToolCnt));
 
     CommToolCnt.CommToolNo = _pCfg->setCommToolNo;
     if (comm_tool_scan(&CommToolCnt, _pCfg->pDevicePort)) return -1;
-    if (comm_tool_open(&CommToolCnt, 20)) return -2;
+    if (comm_tool_open(&CommToolCnt, 0)) return -2;
 
     LOG_INF("Start Configure CAN device!");
-    if (set_can_terminal_resistor(state)) {
-        LOG_ERR("Failed to configure CAN terminal resistor!");
-        return -3;
-    }
-    if (set_can_baudrate(_pCfg->comInfo.comBaud.value)) {
+    if (set_can_baudrate(CommToolCnt.mHand, _pCfg->comInfo.comBaud.value)) {
         LOG_ERR("Failed to configure can baud rate!");
         return -4;
     }
@@ -191,12 +173,9 @@ tS16 set_can_device_init(const config_file_t* _pCfg)
         return -5;
     }
     LOG_INF("Configure can id filtering      -> Enable");
-    if (state == Enable) {
-        LOG_INF("Configure can terminal resistor -> Enable");
-    } else {
-        LOG_INF("Configure can terminal resistor -> Disable");
-    }
+    LOG_INF("Configure can terminal resistor -> Enable");
     LOG_INF("Configure can baud rate         -> %dk", _pCfg->comInfo.comBaud.value);
+    LOG_INF("TCANLINPro Configure completed!");
     printf("====================================================================\r\n");
 
     return 0;
