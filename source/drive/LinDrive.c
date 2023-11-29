@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\uds_lin\LinDrive.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\drive\LinDrive.c
  * @Author       : jianhun
  * @CreationTime : 2023-10-21 23:16:36
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-14 13:10:05
+ * @LastEditTime : 2023-11-29 15:58:06
  * @Description  : 
  ******************************************************************************/
 
@@ -192,6 +192,7 @@ tS16 set_lin_device_init(const config_file_t* _pCfg)
 {
     memset(&CommToolCnt, 0, sizeof(CommToolCnt));
 
+    CommToolCnt.CommToolNo = _pCfg->setCommToolNo;
     if (comm_tool_scan(&CommToolCnt, _pCfg->pDevicePort)) return -1;
     if (comm_tool_open(&CommToolCnt, 13)) return -2;
 
