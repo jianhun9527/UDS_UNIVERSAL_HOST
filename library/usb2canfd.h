@@ -164,11 +164,6 @@ extern "C"
       * @retval 函数执行状态，小于0函数执行出错
       */
     int WINAPI CANFD_StopSchedule(int DevHandle, unsigned char CANIndex);
-
-    int WINAPI CANFD_SetRelay(int DevHandle, unsigned char RelayState);
-    int WINAPI CANFD_SetRelayData(int DevHandle, CAN_RELAY_HEAD *pCANRelayHead, CAN_RELAY_DATA *pCANRelayData);
-    int WINAPI CANFD_GetRelayData(int DevHandle, CAN_RELAY_HEAD *pCANRelayHead, CAN_RELAY_DATA *pCANRelayData);
-
 #ifdef __cplusplus
 }
 #endif

@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\uds_lin\LinDrive.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\drive\LinDrive.c
  * @Author       : jianhun
  * @CreationTime : 2023-10-21 23:16:36
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-14 13:10:05
+ * @LastEditTime : 2023-11-29 12:41:12
  * @Description  : 
  ******************************************************************************/
 
@@ -213,8 +213,6 @@ tS16 set_lin_device_init(const config_file_t* _pCfg)
 
 tS16 set_lin_device_deinit(void)
 {
-    CommToolCnt.ComStateCtl.ReceEnable = FALSE;
-    CommToolCnt.ComStateCtl.SendEnable = FALSE;
     LOG_INF("Successfully stop LIN communication!");
     return comm_tool_close(&CommToolCnt);
 }
@@ -409,8 +407,6 @@ tS16 lin_frame_slave_read(lin_frame_msg_t* _frame)
 
 tS16 wait_lin_frame_send_complete(void)
 {
-    while(FALSE == CommToolCnt.ComDataFifo.TXEmpty) Sleep(0);
-
     return 0;
 }
 

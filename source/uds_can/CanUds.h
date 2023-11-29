@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\uds_can\CanUds.h
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\uds_can\CanUds.h
  * @Author       : jianhun
  * @CreationTime : 2023-10-21 23:15:35
  * @Version       : V1.0
- * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-12 23:10:08
+ * @LastEditors  : JF.Cheng
+ * @LastEditTime : 2023-11-29 12:31:56
  * @Description  : 
  ******************************************************************************/
 
@@ -25,18 +25,19 @@ extern "C" {
 * Header file declaration
 *******************************************************************************/
 #include "CanDrive.h"
+#include "can_uds.h"
 
 /*******************************************************************************
 * Defines and macros            (scope: global)
 *******************************************************************************/
 #define CAN_UDS_BUFFER_INVAILD      -40
-#define CAN_UDS_BUFFER_OVFLW        -41
-#define CAN_UDS_FORMAT_ERROR        -42
-#define CAN_UDS_WRONG_SN            -43
-#define CAN_UDS_REV_TIMEOUT         -44
-#define CAN_UDS_INVALID_FC          -45
-#define CAN_UDS_SEQUENCE_ERROR      -46
-#define CAN_UDS_ERROR               -47
+// #define CAN_UDS_BUFFER_OVFLW        CAN_UDS_BUFFER_OVFLW
+#define CAN_UDS_FORMAT_ERROR        CAN_UDS_UNEXP_PDU
+// #define CAN_UDS_WRONG_SN            CAN_UDS_WRONG_SN
+#define CAN_UDS_REV_TIMEOUT         CAN_UDS_TIMEOUT_Bs
+#define CAN_UDS_INVALID_FC          CAN_UDS_INVALID_FS
+#define CAN_UDS_SEQUENCE_ERROR      CAN_UDS_WFT_OVRN
+// #define CAN_UDS_ERROR               CAN_UDS_ERROR
 
 /*******************************************************************************
 * Typedefs and structures       (scope: global)
