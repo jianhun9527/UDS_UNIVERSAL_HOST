@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\uds_lin\LinUds.h
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\uds_lin\LinUds.h
  * @Author       : jianhun
  * @CreationTime : 2023-10-21 23:16:52
  * @Version       : V1.0
- * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-13 00:52:23
+ * @LastEditors  : JF.Cheng
+ * @LastEditTime : 2023-11-29 18:51:55
  * @Description  : 
  ******************************************************************************/
 
@@ -25,18 +25,19 @@ extern "C" {
 * Header file declaration
 *******************************************************************************/
 #include "LinDrive.h"
+#include "lin_uds.h"
 
 /*******************************************************************************
 * Defines and macros            (scope: global)
 *******************************************************************************/
 #define LIN_UDS_BUFFER_INVAILD      -50
-#define LIN_UDS_BUFFER_OVFLW        -51
-#define LIN_UDS_FORMAT_ERROR        -52
-#define LIN_UDS_WRONG_SN            -53
-#define LIN_UDS_REV_TIMEOUT         -54
-#define LIN_UDS_INVALID_FC          -55
-#define LIN_UDS_SEQUENCE_ERROR      -56
-#define LIN_UDS_ERROR               -57
+// #define LIN_UDS_BUFFER_OVFLW        -51
+#define LIN_UDS_FORMAT_ERROR        LIN_UDS_UNEXP_PDU
+// #define LIN_UDS_WRONG_SN            -53
+#define LIN_UDS_REV_TIMEOUT         LIN_UDS_TRAN_USB
+#define LIN_UDS_INVALID_FC          LIN_UDS_INVALID_FS
+#define LIN_UDS_SEQUENCE_ERROR      LIN_UDS_WFT_OVRN
+// #define LIN_UDS_ERROR               -57
 
 /*******************************************************************************
 * Typedefs and structures       (scope: global)

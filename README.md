@@ -72,6 +72,12 @@
 1. 新增CAN id接收过滤功能
 
 
+### 231129 TCANLINPro记录
+1. 增加对重庆图莫斯公司总线适配器USB2CANFD&LIN设备的驱动支持
+2. 增加TCANLINPro的CAN UDS支持
+3. 增加TCANLINPro的LIN UDS支持
+
+
 ### 待实现功能
 N/A
 

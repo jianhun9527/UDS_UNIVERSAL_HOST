@@ -146,7 +146,6 @@ typedef union can_tp_pdu
 *******************************************************************************/
 tS16 can_uds_request(uds_data_t* _pdata)
 {
-    extern comm_tool_t CommToolCnt;
     CAN_UDS_ADDR canuds;
 
     memset(&canuds, 0, sizeof(CAN_UDS_ADDR));
@@ -162,7 +161,6 @@ tS16 can_uds_request(uds_data_t* _pdata)
 
 tS16 can_uds_response(uds_data_t* _pdata, tU16 _timeout_ms)
 {
-    extern comm_tool_t CommToolCnt;
     CAN_UDS_ADDR canuds;
     tS16 retval;
 

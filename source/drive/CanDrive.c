@@ -10,7 +10,7 @@
  * @CreationTime : 2023-10-21 23:13:48
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-29 13:01:03
+ * @LastEditTime : 2023-11-29 16:31:34
  * @Description  : 
  ******************************************************************************/
 
@@ -54,7 +54,6 @@ typedef union can_frame
 /*******************************************************************************
 * Global variable definitions   (scope: module-local)
 *******************************************************************************/
-comm_tool_t CommToolCnt = {0};
 
 /*******************************************************************************
 * Global variable definitions   (scope: module-exported)
@@ -179,16 +178,16 @@ tS16 set_can_device_deinit(void)
     return comm_tool_close(&CommToolCnt);
 }
 
-tS16 can_frame_send(can_frame_msg_t* frame)
+tS16 can_frame_send(can_frame_msg_t* _frame)
 {
-    (void)frame;
+    (void)_frame;
 
     return 0;
 }
 
-tS16 can_frame_read(can_frame_msg_t* frame)
+tS16 can_frame_read(can_frame_msg_t* _frame)
 {
-    (void)frame;
+    (void)_frame;
 
     return 0;
 }
