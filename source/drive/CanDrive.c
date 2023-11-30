@@ -10,7 +10,7 @@
  * @CreationTime : 2023-10-21 23:13:48
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-27 21:45:13
+ * @LastEditTime : 2023-11-30 00:44:51
  * @Description  : 
  ******************************************************************************/
 
@@ -26,33 +26,49 @@
 /*******************************************************************************
 * Typedefs and structures       (scope: module-local)
 *******************************************************************************/
-typedef enum tr_status
-{
-    Disable = 0,
-    Enable = 1
-} tr_status_t;
-
-#pragma pack(1)
 typedef union can_frame
 {
-    tU8 msgData[20];
-    struct 
-    {
-        tU8 command;
-        tU32 standard_id;
-        tU32 extender_id;
-        tU8 id_type;        // 0x00: standard frame, 0x01: extended frame
-        tU8 frame_type;     // 0x00: Data Frame, 0x01: remote frame
-        tU8 dlc;
-        tU8 data[8];
-    } msg;
+    tU8 msgData[24];
+    cando_frame_t msg;
 } can_frame_t;
-#pragma pack()
+
+typedef enum can_baud_no
+{
+    can_baud_5000,
+    can_baud_10000,
+    can_baud_20000,
+    can_baud_50000,
+    can_baud_100000,
+    can_baud_125000,
+    can_baud_250000,
+    can_baud_500000,
+    can_baud_800000,
+    can_baud_1000000,
+    can_baud_list_max
+} can_baud_no_t;
+
+typedef struct cando_timing_stru {
+    tU16 baudrate;
+    can_baud_no_t no;
+    cando_bittiming_t timing;
+} cando_timing_stru_t;
 
 /*******************************************************************************
 * Global variable definitions   (scope: module-local)
 *******************************************************************************/
-comm_tool_t CommToolCnt = {0};
+static cando_timing_stru_t candotiming[can_baud_list_max] = {
+    {5,  can_baud_5000,  {1, 12, 2, 1, 600}},
+    {10, can_baud_10000, {1, 12, 2, 1, 300}},
+    {20, can_baud_20000, {1, 12, 2, 1, 150}},
+    {50, can_baud_50000,   {1, 12, 2, 1, 60}},
+    {100, can_baud_100000, {1, 12, 2, 1, 30}},
+    {125, can_baud_125000, {1, 12, 2, 1, 24}},
+    {250, can_baud_250000, {1, 12, 2, 1, 12}},
+    {500, can_baud_500000, {1, 12, 2, 1, 6}},
+    {800, can_baud_800000, {1, 13, 5, 1, 3}},
+    {1000, can_baud_1000000, {1, 10, 4, 1, 3}},
+};
+static comm_tool_t CommToolDev = {0};
 
 /*******************************************************************************
 * Global variable definitions   (scope: module-exported)
@@ -61,9 +77,8 @@ comm_tool_t CommToolCnt = {0};
 /*******************************************************************************
 * Function prototypes           (scope: module-local)
 *******************************************************************************/
-static tS16 set_can_terminal_resistor(tr_status_t _state);
-static tS16 set_can_baudrate(tU16 _baudrate);
-static tS16 set_can_recv_filter(tU32 _id);
+static tS16 set_can_baudrate(cando_handle _mhand, tU16 _baudrate);
+static tS16 set_can_start(cando_handle _mhand);
 
 /*******************************************************************************
 * Function prototypes           (scope: module-exported)
@@ -72,96 +87,46 @@ static tS16 set_can_recv_filter(tU32 _id);
 /*******************************************************************************
 * Function implementations      (scope: module-local)
 *******************************************************************************/
-static tS16 set_can_terminal_resistor(tr_status_t _state)
+static tS16 set_can_baudrate(cando_handle _mhand, tU16 _baudrate)
 {
-    tU8 buff[2] = {0x06, 0x00};
+    tU8 idx;
 
-    buff[1] = _state == Enable ? 0x01 : 0x02;
-
-    return comm_tool_send_data(&CommToolCnt, buff, 2);
-}
-
-static tS16 set_can_baudrate(tU16 _baudrate)
-{
-    tU8 buff[11] = {0x03, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00};
-
-    switch (_baudrate)
+    for (idx = 0; idx < can_baud_list_max; idx ++)
     {
-    case 500:
-        buff[2] = 0xF4, buff[3] = 0x01, buff[6] = 0x12;
-    break;
-    case 1000:
-        buff[2] = 0xE8, buff[3] = 0x03, buff[6] = 0x09;
-    break;
-    case 100:
-        buff[2] = 0x64, buff[6] = 0x5A;
-    break;
-    case 125:
-        buff[2] = 0x7D, buff[6] = 0x48;
-    break;
-    case 200:
-        buff[2] = 0xC8, buff[6] = 0x2D;
-    break;
-    case 250:
-        buff[2] = 0xFA, buff[6] = 0x24;
-    break;
-    case 400:
-        buff[2] = 0x90, buff[3] = 0x01, buff[6] = 0x12, buff[9] = 0x07;
-    break;
-    case 666:
-        buff[2] = 0x9A, buff[3] = 0x02, buff[6] = 0x0B, buff[9] = 0x07;
-    break;
-    case 800:
-        buff[2] = 0x20, buff[3] = 0x03, buff[6] = 0x09, buff[9] = 0x07;
-    break;
-    case 20:
-        buff[2] = 0x14, buff[6] = 0xC2, buff[7] = 0x01;
-    break;
-    case 40:
-        buff[2] = 0x28, buff[6] = 0xE1;
-    break;
-    case 50:
-        buff[2] = 0x32, buff[6] = 0xB4;
-    break;
-    case 80:
-        buff[2] = 0x50, buff[6] = 0x71;
-    break;
-    default:
-        LOG_ERR("The baud rate configuration is wrong and the current baud rate cannot be set!");
-        return -2;
-    break;
-    }
-
-    return comm_tool_send_data(&CommToolCnt, buff, 11);
-}
-
-static tS16 set_can_recv_filter(tU32 _id)
-{
-    tU8 filtertab[10] = {0x03, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-    tU8 idx = 0;
-    
-    for (idx = 0; idx < 14; idx ++)
-    {
-        filtertab[3] = idx;
-        if (0 == idx) {
-            filtertab[4] = 1;
-            filtertab[6] = (tU8)(_id >> 0);
-            filtertab[7] = (tU8)(_id >> 8);
-            filtertab[8] = (tU8)(_id >> 16);
-            filtertab[9] = (tU8)(_id >> 24);
-        } else {
-            filtertab[4] = 0;
-            filtertab[6] = 0;
-            filtertab[7] = 0;
-            filtertab[8] = 0;
-            filtertab[9] = 0;
+        if (candotiming[idx].baudrate == _baudrate) {
+            if (false == cando_set_timing(_mhand, &candotiming->timing)) {
+                return TOOL_CONFIG_BAUD_RATE_FAIL;
+            }
+            break;
         }
-        if (comm_tool_send_data(&CommToolCnt, filtertab, 10)) break;
     }
-    if (idx != 14) return -1;
-    filtertab[2] = 0x06;
+    if (can_baud_list_max == idx) return TOOL_BAUD_RATE_NOT_SUPPORT;
+    LOG_INF("Configure can baud rate         -> %dk", _baudrate);
 
-    return comm_tool_send_data(&CommToolCnt, filtertab, 3);
+    return 0;
+}
+
+static tS16 set_can_start(cando_handle _mhand)
+{
+    tU32 fw_version, hw_version;
+    wchar_t* pcando_serial_num;
+
+    if (false == cando_start(_mhand, CANDO_MODE_NORMAL)) {
+        return TOOL_CANDO_START_FAIL;
+    }
+    LOG_INF("Successfully to start the Cando device!");
+
+    pcando_serial_num = cando_get_serial_number_str(_mhand);
+    if (false == cando_get_dev_info(_mhand, &fw_version, &hw_version)) {
+        LOG_ERR("Failed to get Cando device information!");
+        return TOOL_GET_CANDO_INFO_FAIL;
+    }
+    LOG_INF("Cando Firmware Info:");
+    LOG_INF("Cando Firmware serial number: %S", pcando_serial_num);
+    LOG_INF("Cando Firmware Version: v%d.%d", (fw_version / 10), (fw_version % 10));
+    LOG_INF("Cando Hardware Version: v%d.%d", (hw_version / 10), (hw_version % 10));
+
+    return 0;
 }
 
 /*******************************************************************************
@@ -169,34 +134,23 @@ static tS16 set_can_recv_filter(tU32 _id)
 *******************************************************************************/
 tS16 set_can_device_init(const config_file_t* _pCfg)
 {
-    tr_status_t state = Enable;
+    memset(&CommToolDev, 0, sizeof(CommToolDev));
 
-    memset(&CommToolCnt, 0, sizeof(CommToolCnt));
-
-    CommToolCnt.CommToolNo = _pCfg->setCommToolNo;
-    if (comm_tool_scan(&CommToolCnt, _pCfg->pDevicePort)) return -1;
-    if (comm_tool_open(&CommToolCnt, 20)) return -2;
+    CommToolDev.CommToolNo = _pCfg->setCommToolNo;
+    if (comm_tool_scan(&CommToolDev, _pCfg->pDevicePort)) return -1;
+    if (comm_tool_open(&CommToolDev, 20)) return -2;
 
     LOG_INF("Start Configure CAN device!");
-    if (set_can_terminal_resistor(state)) {
-        LOG_ERR("Failed to configure CAN terminal resistor!");
+    if (set_can_baudrate(CommToolDev.mHand, _pCfg->comInfo.comBaud.value)) {
+        LOG_ERR("Failed to configure can baud rate!");
         return -3;
     }
-    if (set_can_baudrate(_pCfg->comInfo.comBaud.value)) {
-        LOG_ERR("Failed to configure can baud rate!");
+    if (set_can_start(CommToolDev.mHand)) {
+        LOG_ERR("Failed to start Cando device!");
         return -4;
     }
-    if (set_can_recv_filter(_pCfg->udsCfg.resDiagID)) {
-        LOG_ERR("Failed to configure can id filtering!");
-        return -5;
-    }
-    LOG_INF("Configure can id filtering      -> Enable");
-    if (state == Enable) {
-        LOG_INF("Configure can terminal resistor -> Enable");
-    } else {
-        LOG_INF("Configure can terminal resistor -> Disable");
-    }
-    LOG_INF("Configure can baud rate         -> %dk", _pCfg->comInfo.comBaud.value);
+
+    LOG_INF("Cando device Configure completed!");
     printf("====================================================================\r\n");
 
     return 0;
@@ -204,17 +158,18 @@ tS16 set_can_device_init(const config_file_t* _pCfg)
 
 tS16 set_can_device_deinit(void)
 {
-    CommToolCnt.ComStateCtl.ReceEnable = FALSE;
-    CommToolCnt.ComStateCtl.SendEnable = FALSE;
+    CommToolDev.ComStateCtl.ReceEnable = FALSE;
+    CommToolDev.ComStateCtl.SendEnable = FALSE;
     LOG_INF("Successfully stop CAN communication!");
-    return comm_tool_close(&CommToolCnt);
+    return comm_tool_close(&CommToolDev);
 }
 
 tS16 can_frame_send(can_frame_msg_t* frame)
 {
     can_frame_t canframe;
 
-    if (INVALID_HANDLE_VALUE != CommToolCnt.mHand) {
+
+    if (INVALID_HANDLE_VALUE != CommToolDev.mHand) {
         memset(canframe.msgData, 0, sizeof(canframe));
         canframe.msg.command = 1;
 
@@ -241,7 +196,7 @@ tS16 can_frame_send(can_frame_msg_t* frame)
 
         memcpy(canframe.msg.data, frame->data, frame->dlc);
         
-        return comm_tool_send_data(&CommToolCnt, canframe.msgData, 20);
+        return comm_tool_send_data(&CommToolDev, canframe.msgData, 20);
     } else {
         LOG_ERR("Can device is not initialized or initialization failed!");
         return CAN_DERIVE_INITIAL_FAIL;
@@ -253,9 +208,9 @@ tS16 can_frame_read(can_frame_msg_t* frame)
     can_frame_t canframe;
     tU8 recvsize = 20;
 
-    if (INVALID_HANDLE_VALUE != CommToolCnt.mHand) {
+    if (INVALID_HANDLE_VALUE != CommToolDev.mHand) {
         memset(&canframe, 0, sizeof(canframe));
-        if (!comm_tool_rece_data(&CommToolCnt, canframe.msgData, &recvsize) && recvsize == 20) {
+        if (!comm_tool_rece_data(&CommToolDev, canframe.msgData, &recvsize) && recvsize == 20) {
             if (canframe.msg.command == 1) {
                 if (canframe.msg.id_type == CAN_ID_TYPE_STANDARD) {
                     frame->id_type = CAN_ID_TYPE_STANDARD;
@@ -290,7 +245,7 @@ tS16 can_frame_read(can_frame_msg_t* frame)
 
 tS16 wait_can_frame_send_complete(void)
 {
-    while (FALSE == CommToolCnt.ComDataFifo.TXEmpty) Sleep(0);
+    while (FALSE == CommToolDev.ComDataFifo.TXEmpty) Sleep(0);
     
     return 0;
 }

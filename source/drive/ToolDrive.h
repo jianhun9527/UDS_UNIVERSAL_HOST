@@ -25,26 +25,30 @@ extern "C" {
 * Header file declaration
 *******************************************************************************/
 #include "commondef.h"
+#include "cando.h"
 #include "fifo.h"
 
 /*******************************************************************************
 * Defines and macros            (scope: global)
 *******************************************************************************/
-#define SP_NUM_MAX          5
-#define SP_NAME_LEN_MAX     50
-#define UART_SEND_BUFF_MAX  256
-#define UART_RECE_BUFF_MAX  32
+#define UART_SEND_BUFF_MAX          256
+#define UART_RECE_BUFF_MAX          32
+
+#define TOOL_FUNCTION_NOT_SUPPORT   -100
+#define TOOL_MALLOC_MEMORY_FAIL     -101
+#define TOOL_SCAN_DEVICE_FAIL       -102
+#define TOOL_GET_DEVICE_NUM_FAIL    -103
+#define TOOL_NOT_CONNECTED          -104
+#define TOOL_GET_DEVICE_HANDLE_FAIL -105
+#define TOOL_OPEN_CANDO_DEVICE_FAIL -106
+#define TOOL_CONFIG_BAUD_RATE_FAIL  -107
+#define TOOL_BAUD_RATE_NOT_SUPPORT  -108
+#define TOOL_CANDO_START_FAIL       -109
+#define TOOL_GET_CANDO_INFO_FAIL    -110
 
 /*******************************************************************************
 * Typedefs and structures       (scope: global)
 *******************************************************************************/
-typedef struct com_over_lap
-{
-    LPOVERLAPPED pOvReadEvent;
-    LPOVERLAPPED pOvWaitEvent;
-    LPOVERLAPPED pOvWriteEvent;
-} com_over_lap_t;
-
 typedef struct com_fifo_data
 {
     msg_fifo_t UartRxMsg;
@@ -62,12 +66,10 @@ typedef struct com_status_ctl
 
 typedef struct comm_tool
 {
-    HANDLE mHand;
+    cando_handle mHand;
     tS16 CommToolCnt;
     tS16 CommToolNo;
-    tU8 DevicePort[SP_NUM_MAX][SP_NAME_LEN_MAX];
-    tU8 DeviceName[SP_NUM_MAX][SP_NAME_LEN_MAX];
-    com_over_lap_t ComOvlpEvent;
+    cando_list_handle DeviceList;
     com_fifo_data_t ComDataFifo;
     com_status_ctl_t ComStateCtl;
 } comm_tool_t;
