@@ -10,13 +10,14 @@
  * @CreationTime : 2023-11-24 22:31:02
  * @Version       : V1.0
  * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-24 22:31:23
+ * @LastEditTime : 2023-11-30 22:39:09
  * @Description  : 
  ******************************************************************************/
 
 /*******************************************************************************
 * Header file declaration
 *******************************************************************************/
+#include "ControlCAN.h"
 #include "ToolDrive.h"
 #include <setupapi.h>
 #include <tchar.h>
@@ -138,6 +139,12 @@ static unsigned __stdcall ComSendThread(void* lpparam)
 *******************************************************************************/
 tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort)
 {
+    VCI_INIT_CONFIG vci_cfg = {0x00000000, 0xFFFFFFFF, 0, 0, 0x00, 0x1C, 0};
+    // 新增VCI方式，唤醒丢失的串口，用于后续通信
+    VCI_OpenDevice(VCI_USBCAN_2E_U, 0, 0);
+    VCI_InitCAN(VCI_USBCAN_2E_U, 0, 0, &vci_cfg);
+    VCI_CloseDevice(VCI_USBCAN_2E_U, 0);
+
     // 返回设备集句柄
     HDEVINFO hDevInfo = SetupDiGetClassDevsA(NULL, NULL, NULL, DIGCF_PRESENT|DIGCF_ALLCLASSES);
     if (hDevInfo == INVALID_HANDLE_VALUE) {
