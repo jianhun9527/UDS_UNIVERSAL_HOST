@@ -9,8 +9,8 @@
  * @Author       : jianhun
  * @CreationTime : 2023-11-24 22:30:49
  * @Version       : V1.0
- * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-24 22:55:14
+ * @LastEditors  : JF.Cheng
+ * @LastEditTime : 2023-11-30 16:32:55
  * @Description  : 
  ******************************************************************************/
 
@@ -31,9 +31,11 @@ extern "C" {
 /*******************************************************************************
 * Defines and macros            (scope: global)
 *******************************************************************************/
-#define UART_SEND_BUFF_MAX          256
-#define UART_RECE_BUFF_MAX          32
+#define UART_SEND_BUFF_MAX          128
+#define UART_RECV_BUFF_MAX          128
 
+#define TOOL_SEND_DATA_FAIL         -1
+#define TOOL_RECV_DATA_FAIL         -2
 #define TOOL_FUNCTION_NOT_SUPPORT   -100
 #define TOOL_MALLOC_MEMORY_FAIL     -101
 #define TOOL_SCAN_DEVICE_FAIL       -102
@@ -45,23 +47,30 @@ extern "C" {
 #define TOOL_BAUD_RATE_NOT_SUPPORT  -108
 #define TOOL_CANDO_START_FAIL       -109
 #define TOOL_GET_CANDO_INFO_FAIL    -110
+#define TOOL_BUS_FAULT              -111
+#define TOOL_BUS_OVERLOAD           -112
+#define TOOL_BIT_ERR                -113
+#define TOOL_BUS_ACK_ERR            -114
+#define TOOL_FAULT_PASING_ERR       -115
 
 /*******************************************************************************
 * Typedefs and structures       (scope: global)
 *******************************************************************************/
 typedef struct com_fifo_data
 {
-    msg_fifo_t UartRxMsg;
-    msg_fifo_t UartTxMsg;
+    msg_fifo_t RxMsgBuff;
+    msg_fifo_t TxMsgBuff;
     WINBOOL RxEmpty;
     WINBOOL TXEmpty;
-    tU8 Size;
+    tU16 Size;
 } com_fifo_data_t;
 
 typedef struct com_status_ctl
 {
     WINBOOL ReceEnable;
     WINBOOL SendEnable;
+    tS32 RxErrState;
+    tS32 TxErrState;
 } com_status_ctl_t;
 
 typedef struct comm_tool
@@ -96,8 +105,8 @@ typedef struct uds_data
 extern tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort);
 extern tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size);
 extern tS16 comm_tool_close(comm_tool_t* _pCtrl);
-extern tS16 comm_tool_send_data(comm_tool_t* _pctrl, tU8* _pdata, tU8 _size);
-extern tS16 comm_tool_rece_data(comm_tool_t* _pctrl, tU8* _pdata, tU8* _size);
+extern tS16 comm_tool_send_data(msg_fifo_t* _pbuff, tU8* _pdata, tU16 _size);
+extern tS16 comm_tool_rece_data(msg_fifo_t* _pbuff, tU8* _pdata, tU16 _size);
 
 /*******************************************************************************
 * Inline functions

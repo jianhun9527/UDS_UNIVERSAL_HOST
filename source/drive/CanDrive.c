@@ -10,7 +10,7 @@
  * @CreationTime : 2023-10-21 23:13:48
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-30 00:44:51
+ * @LastEditTime : 2023-11-30 20:29:49
  * @Description  : 
  ******************************************************************************/
 
@@ -28,7 +28,7 @@
 *******************************************************************************/
 typedef union can_frame
 {
-    tU8 msgData[24];
+    tU8 msgData[sizeof(cando_frame_t)];
     cando_frame_t msg;
 } can_frame_t;
 
@@ -137,107 +137,91 @@ tS16 set_can_device_init(const config_file_t* _pCfg)
     memset(&CommToolDev, 0, sizeof(CommToolDev));
 
     CommToolDev.CommToolNo = _pCfg->setCommToolNo;
-    if (comm_tool_scan(&CommToolDev, _pCfg->pDevicePort)) return -1;
-    if (comm_tool_open(&CommToolDev, 20)) return -2;
+    if (comm_tool_scan(&CommToolDev, _pCfg->pDevicePort)) goto __DEVICE_INIT_FAIL;
+    if (comm_tool_open(&CommToolDev, sizeof(can_frame_t))) goto __DEVICE_INIT_FAIL;
 
     LOG_INF("Start Configure CAN device!");
     if (set_can_baudrate(CommToolDev.mHand, _pCfg->comInfo.comBaud.value)) {
         LOG_ERR("Failed to configure can baud rate!");
-        return -3;
+        goto __DEVICE_INIT_FAIL;
     }
     if (set_can_start(CommToolDev.mHand)) {
         LOG_ERR("Failed to start Cando device!");
-        return -4;
+        goto __DEVICE_INIT_FAIL;
     }
 
     LOG_INF("Cando device Configure completed!");
     printf("====================================================================\r\n");
 
     return 0;
+
+__DEVICE_INIT_FAIL:
+    return CAN_DERIVE_INITIAL_FAIL;
 }
 
 tS16 set_can_device_deinit(void)
 {
     CommToolDev.ComStateCtl.ReceEnable = FALSE;
     CommToolDev.ComStateCtl.SendEnable = FALSE;
+    CommToolDev.ComStateCtl.RxErrState = 0;
+    CommToolDev.ComStateCtl.TxErrState = 0;
     LOG_INF("Successfully stop CAN communication!");
     return comm_tool_close(&CommToolDev);
 }
 
-tS16 can_frame_send(can_frame_msg_t* frame)
+tS16 can_frame_send(can_frame_msg_t* _exframe)
 {
-    can_frame_t canframe;
+    can_frame_t intframe;
 
-
-    if (INVALID_HANDLE_VALUE != CommToolDev.mHand) {
-        memset(canframe.msgData, 0, sizeof(canframe));
-        canframe.msg.command = 1;
-
-        if (frame->dlc > 8) {
-            LOG_ERR("CAN sends more than 8 bytes in a single frame: %d", frame->dlc);
-            return CAN_SEND_BUFFER_OVERFLOW;
-        }
-        canframe.msg.dlc = frame->dlc;
-
-        if (CAN_ID_TYPE_EXTENDED == frame->id_type) {
-            canframe.msg.extender_id = frame->id;
-            canframe.msg.id_type = 1;
-        } else {
-            canframe.msg.standard_id = frame->id;
-            canframe.msg.id_type = 0;
-        }
-
-        if (CAN_FRAME_TYPE_REMOTE == frame->frame_type) {
-            LOG_ERR("Remote frames are temporarily not supported!");
-            return CAN_SEND_REMOTE_FUN_NS;
-        } else {
-            canframe.msg.frame_type = 0;
-        }
-
-        memcpy(canframe.msg.data, frame->data, frame->dlc);
-        
-        return comm_tool_send_data(&CommToolDev, canframe.msgData, 20);
-    } else {
-        LOG_ERR("Can device is not initialized or initialization failed!");
-        return CAN_DERIVE_INITIAL_FAIL;
+    memset(&intframe, 0 , sizeof(can_frame_t));
+    intframe.msg.can_id = _exframe->id;
+    if (_exframe->id_type == CAN_ID_TYPE_EXTENDED) {
+        intframe.msg.can_id |= CANDO_ID_EXTENDED;
     }
+    if (_exframe->frame_type == CAN_FRAME_TYPE_REMOTE) {
+        LOG_ERR("Remote frames are temporarily not supported!");
+        return CAN_SEND_REMOTE_FUN_NS;
+    }
+    if (_exframe->dlc > 8) {
+        LOG_ERR("CAN sends more than 8 bytes in a single frame: %d", _exframe->dlc);
+        return CAN_SEND_BUFFER_OVERFLOW;
+    }
+    intframe.msg.can_dlc = _exframe->dlc;
+    intframe.msg.flags = _exframe->flags;
+    memcpy(intframe.msg.data, _exframe->data, _exframe->dlc);
+
+    return comm_tool_send_data(&CommToolDev.ComDataFifo.TxMsgBuff, intframe.msgData, CommToolDev.ComDataFifo.Size);
 }
 
-tS16 can_frame_read(can_frame_msg_t* frame)
+tS16 can_frame_read(can_frame_msg_t* _exframe)
 {
-    can_frame_t canframe;
-    tU8 recvsize = 20;
+    can_frame_t intframe;
 
-    if (INVALID_HANDLE_VALUE != CommToolDev.mHand) {
-        memset(&canframe, 0, sizeof(canframe));
-        if (!comm_tool_rece_data(&CommToolDev, canframe.msgData, &recvsize) && recvsize == 20) {
-            if (canframe.msg.command == 1) {
-                if (canframe.msg.id_type == CAN_ID_TYPE_STANDARD) {
-                    frame->id_type = CAN_ID_TYPE_STANDARD;
-                    frame->id = canframe.msg.standard_id;
-                } else {
-                    frame->id_type = CAN_ID_TYPE_EXTENDED;
-                    frame->id = canframe.msg.extender_id;
-                }
+    memset(&intframe, 0, sizeof(can_frame_t));
 
-                if (canframe.msg.frame_type == CAN_FRAME_TYPE_DATA) {
-                    frame->frame_type = CAN_FRAME_TYPE_DATA;
-                } else {
-                    frame->frame_type = CAN_FRAME_TYPE_REMOTE;
-                }
-
-                frame->dlc = canframe.msg.dlc;
-                memcpy(frame->data, canframe.msg.data, frame->dlc);
-            } else {
-                LOG_ERR("CAN read frame format error!");
-                return CAN_READ_FRAME_FORMAT_ERR;
-            }
+    if (!comm_tool_rece_data(&CommToolDev.ComDataFifo.RxMsgBuff, intframe.msgData, CommToolDev.ComDataFifo.Size)) {
+        if (0 != CommToolDev.ComStateCtl.RxErrState) {
+            CommToolDev.ComStateCtl.RxErrState = 0;
+            return CAN_RECV_FAIL;
+        }
+        _exframe->id = intframe.msg.can_id & CANDO_ID_MASK;
+        _exframe->dlc = intframe.msg.can_dlc;
+        _exframe->flags = intframe.msg.flags;
+        memcpy(_exframe->data, intframe.msg.data, _exframe->dlc);
+        if (0 != (intframe.msg.can_id & CANDO_ID_EXTENDED)) {
+            _exframe->id_type = CAN_ID_TYPE_EXTENDED;
         } else {
-            frame->dlc = 8U;
+            _exframe->id_type = CAN_ID_TYPE_STANDARD;
+        }
+        if (0 != (intframe.msg.can_id & CANDO_ID_RTR)) {
+            _exframe->frame_type = CAN_FRAME_TYPE_REMOTE;
+        } else {
+            _exframe->frame_type = CAN_FRAME_TYPE_DATA;
         }
     } else {
-        LOG_ERR("Can device is not initialized or initialization failed!");
-        return CAN_DERIVE_INITIAL_FAIL;
+        _exframe->id = 0;
+        _exframe->dlc = 8;
+        _exframe->id_type = CAN_ID_TYPE_STANDARD;
     }
 
     return 0;
@@ -245,7 +229,15 @@ tS16 can_frame_read(can_frame_msg_t* frame)
 
 tS16 wait_can_frame_send_complete(void)
 {
-    while (FALSE == CommToolDev.ComDataFifo.TXEmpty) Sleep(0);
+    for(;; Sleep(1))
+    {
+        if (CommToolDev.ComStateCtl.TxErrState != 0) {
+            CommToolDev.ComStateCtl.TxErrState = 0;
+            return CAN_SEND_FAIL;
+        } else {
+            if (TRUE == CommToolDev.ComDataFifo.TXEmpty) break;
+        }
+    }
     
     return 0;
 }

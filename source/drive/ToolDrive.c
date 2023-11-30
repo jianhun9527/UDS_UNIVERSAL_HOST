@@ -10,7 +10,7 @@
  * @CreationTime : 2023-11-24 22:31:02
  * @Version       : V1.0
  * @LastEditors  : JF.Cheng
- * @LastEditTime : 2023-11-30 00:19:02
+ * @LastEditTime : 2023-11-30 21:57:15
  * @Description  : 
  ******************************************************************************/
 
@@ -52,10 +52,40 @@ static unsigned __stdcall ComRecvThread(void* lpparam)
 {
     comm_tool_t* pCtrl = (comm_tool_t*)lpparam;
 
-    for(;pCtrl->ComStateCtl.ReceEnable;)
+    for(;pCtrl->ComStateCtl.ReceEnable;Sleep(1))
     {
-        if (set_fifo_write(&pCtrl->ComDataFifo.UartRxMsg, NULL, pCtrl->ComDataFifo.Size)) {
-            set_fifo_reset(&pCtrl->ComDataFifo.UartRxMsg);
+        cando_frame_t frame = {0U, 0U, 0U, 0U, 0U, 0U, {0U}, 0U};
+
+        if (false == cando_frame_read(pCtrl->mHand, &frame, 10)) continue;
+        if (frame.can_id & CANDO_ID_ERR) {
+            uint32_t err_code;
+            uint8_t err_tx, err_rx;
+
+            if (cando_parse_err_frame(&frame, &err_code, &err_tx, &err_rx)) {
+                if (err_code & (CAN_ERR_BUSOFF | CAN_ERR_RX_TX_WARNING | CAN_ERR_RX_TX_PASSIVE)) {
+                    pCtrl->ComStateCtl.RxErrState = TOOL_BUS_FAULT;
+                }
+                if (err_code & CAN_ERR_OVERLOAD) {
+                    pCtrl->ComStateCtl.RxErrState = TOOL_BUS_OVERLOAD;
+                }
+                if (err_code & (CAN_ERR_STUFF | CAN_ERR_BIT_RECESSIVE | CAN_ERR_BIT_DOMINANT)) {
+                    pCtrl->ComStateCtl.RxErrState = TOOL_BIT_ERR;
+                }
+                if (err_code & (CAN_ERR_FORM | CAN_ERR_CRC)) {
+                    pCtrl->ComStateCtl.RxErrState = TOOL_BIT_ERR;
+                }
+                if (err_code & CAN_ERR_ACK) {
+                    pCtrl->ComStateCtl.RxErrState = TOOL_BUS_ACK_ERR;
+                }
+            } else {
+                pCtrl->ComStateCtl.RxErrState = TOOL_FAULT_PASING_ERR;
+            }
+            continue;
+        }
+
+        if (frame.echo_id != 0xFFFFFFFF) continue;
+        if (set_fifo_write(&pCtrl->ComDataFifo.RxMsgBuff, (tU8*)&frame, pCtrl->ComDataFifo.Size)) {
+            set_fifo_reset(&pCtrl->ComDataFifo.RxMsgBuff);
         }
     }
 
@@ -65,17 +95,26 @@ static unsigned __stdcall ComRecvThread(void* lpparam)
 static unsigned __stdcall ComSendThread(void* lpparam)
 {
     comm_tool_t* pCtrl = (comm_tool_t*)lpparam;
-    tU16 len = 0;
 
-    for(;pCtrl->ComStateCtl.SendEnable;)
+    for(;pCtrl->ComStateCtl.SendEnable;Sleep(1))
     {
-        len = pCtrl->ComDataFifo.Size;
-        if (get_fifo_read(&pCtrl->ComDataFifo.UartTxMsg, NULL, &len)) {
-            pCtrl->ComDataFifo.TXEmpty = TRUE;
-            Sleep(1);
-        } else {
-            pCtrl->ComDataFifo.TXEmpty = FALSE;
-            set_fifo_reset(&pCtrl->ComDataFifo.UartTxMsg);
+        for(;;)
+        {
+            cando_frame_t frame = {0U, 0U, 0U, 0U, 0U, 0U, {0U}, 0U};
+
+            if (get_fifo_is_empty(&pCtrl->ComDataFifo.TxMsgBuff)) {
+                pCtrl->ComDataFifo.TXEmpty = TRUE;
+                break;
+            } else {
+                pCtrl->ComDataFifo.TXEmpty = FALSE;
+                if (get_fifo_read(&pCtrl->ComDataFifo.TxMsgBuff, (tU8*)&frame, pCtrl->ComDataFifo.Size)) {
+                    set_fifo_reset(&pCtrl->ComDataFifo.TxMsgBuff);
+                } else {
+                    if (false == cando_frame_send(pCtrl->mHand, &frame)) {
+                        pCtrl->ComStateCtl.TxErrState = TOOL_SEND_DATA_FAIL;
+                    }
+                }
+            }
         }
     }
 
@@ -93,12 +132,12 @@ tS16 comm_tool_scan(comm_tool_t* _pctrl, const tS8* _pDevicePort)
         return TOOL_MALLOC_MEMORY_FAIL;
     }
     // 扫描接入的Cando设备
-    if (false == cando_list_scan(&_pctrl->DeviceList)) {
+    if (false == cando_list_scan(_pctrl->DeviceList)) {
         LOG_ERR("Failed to scan Cando device!");
         return TOOL_SCAN_DEVICE_FAIL;
     }
     // 获取接入的Cando设备数量
-    if (false == cando_list_num(&_pctrl->DeviceList, &_pctrl->CommToolCnt)) {
+    if (false == cando_list_num(_pctrl->DeviceList, (tU8*)&_pctrl->CommToolCnt)) {
         LOG_ERR("Failed to get the number of connected Cando devices!");
         return TOOL_GET_DEVICE_NUM_FAIL;
     }
@@ -133,27 +172,29 @@ tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size)
 
     LOG_INF("Successfully opened the Cando_device_%d!", _pctrl->CommToolNo);
 
-    _pctrl->ComDataFifo.Size = _size + 1U;
-    if (set_fifo_init(&_pctrl->ComDataFifo.UartRxMsg, _pctrl->ComDataFifo.Size, 128U)) {
+    _pctrl->ComDataFifo.Size = (tU16)_size;
+    if (set_fifo_init(&_pctrl->ComDataFifo.RxMsgBuff, _pctrl->ComDataFifo.Size, UART_RECV_BUFF_MAX)) {
         LOG_ERR("Failed to initialize serial port receiving buffer area!");
         return -8;
     }
-    if (set_fifo_init(&_pctrl->ComDataFifo.UartTxMsg, _pctrl->ComDataFifo.Size, 128U)) {
+    if (set_fifo_init(&_pctrl->ComDataFifo.TxMsgBuff, _pctrl->ComDataFifo.Size, UART_SEND_BUFF_MAX)) {
         LOG_ERR("Failed to initialize serial port receiving buffer area!");
         return -8;
     }
     LOG_INF("Successfully created communication buffer!");
 
-    _pctrl->ComDataFifo.UartRxMsg.MutexSign = CreateSemaphore(NULL, 1, 1, NULL);
-    _pctrl->ComDataFifo.UartTxMsg.MutexSign = CreateSemaphore(NULL, 1, 1, NULL);
-    if (NULL == _pctrl->ComDataFifo.UartRxMsg.MutexSign ||
-        NULL == _pctrl->ComDataFifo.UartTxMsg.MutexSign) {
+    _pctrl->ComDataFifo.RxMsgBuff.MutexSign = CreateSemaphore(NULL, 1, 1, NULL);
+    _pctrl->ComDataFifo.TxMsgBuff.MutexSign = CreateSemaphore(NULL, 1, 1, NULL);
+    if (NULL == _pctrl->ComDataFifo.RxMsgBuff.MutexSign ||
+        NULL == _pctrl->ComDataFifo.TxMsgBuff.MutexSign) {
         LOG_ERR("Failed to create communication mutex semaphore!");
         return -11;
     }
 
     _pctrl->ComStateCtl.ReceEnable = TRUE;
     _pctrl->ComStateCtl.SendEnable = TRUE;
+    _pctrl->ComStateCtl.RxErrState = 0;
+    _pctrl->ComStateCtl.TxErrState = 0;
     HANDLE mThRecv = (HANDLE)_beginthreadex(NULL, 0, ComRecvThread, _pctrl, 0, NULL);
     if (NULL == mThRecv) {
         LOG_ERR("Failed to create accepting function thread!");
@@ -168,17 +209,15 @@ tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size)
     CloseHandle(mThSend);
     LOG_INF("Successfully created Cando receiving and sending threads!");
 
-    LOG_INF("Cando Configure completed!");
-
     return 0;
 }
 
 tS16 comm_tool_close(comm_tool_t* _pctrl)
 {
-    set_fifo_destroy(&_pctrl->ComDataFifo.UartRxMsg);
-    set_fifo_destroy(&_pctrl->ComDataFifo.UartTxMsg);
-    if (_pctrl->ComDataFifo.UartRxMsg.MutexSign != NULL) CloseHandle(_pctrl->ComDataFifo.UartRxMsg.MutexSign);
-    if (_pctrl->ComDataFifo.UartTxMsg.MutexSign != NULL) CloseHandle(_pctrl->ComDataFifo.UartTxMsg.MutexSign);
+    set_fifo_destroy(&_pctrl->ComDataFifo.RxMsgBuff);
+    set_fifo_destroy(&_pctrl->ComDataFifo.TxMsgBuff);
+    if (_pctrl->ComDataFifo.RxMsgBuff.MutexSign != NULL) CloseHandle(_pctrl->ComDataFifo.RxMsgBuff.MutexSign);
+    if (_pctrl->ComDataFifo.TxMsgBuff.MutexSign != NULL) CloseHandle(_pctrl->ComDataFifo.TxMsgBuff.MutexSign);
     if (_pctrl->mHand != NULL) {
         cando_stop(_pctrl->mHand);
         cando_close(_pctrl->mHand);
@@ -191,33 +230,14 @@ tS16 comm_tool_close(comm_tool_t* _pctrl)
     return 0;
 }
 
-tS16 comm_tool_send_data(comm_tool_t* _pctrl, tU8* _pdata, tU8 _size)
+tS16 comm_tool_send_data(msg_fifo_t* _pbuff, tU8* _pdata, tU16 _size)
 {
-    tU8 data[32] = {0};
-    
-    memset(data, 0, 32);
-    data[0] = _size;
-    
-    memcpy(data + 1, _pdata, _size);
-    if (set_fifo_write(&_pctrl->ComDataFifo.UartTxMsg, data, _pctrl->ComDataFifo.Size))
-        return -2;
-    
-    return 0;
+    return set_fifo_write(_pbuff, _pdata, _size);
 }
 
-tS16 comm_tool_rece_data(comm_tool_t* _pctrl, tU8* _pdata, tU8* _size)
+tS16 comm_tool_rece_data(msg_fifo_t* _pbuff, tU8* _pdata, tU16 _size)
 {
-    tU16 len = _pctrl->ComDataFifo.Size;
-    tU8 data[32] = {0};
-
-    memset(data, 0, 32);
-    if (get_fifo_read(&_pctrl->ComDataFifo.UartRxMsg, data, &len))
-        return -2;
-    if (len != _pctrl->ComDataFifo.Size || *_size < data[0]) return -3;
-    *_size = data[0];
-    memcpy(_pdata, data + 1, *_size);
-
-    return 0;
+    return get_fifo_read(_pbuff, _pdata, _size);
 }
 
 /* End of file */

@@ -9,8 +9,8 @@
  * @Author       : jianhun
  * @CreationTime : 2023-10-21 23:14:02
  * @Version       : V1.0
- * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-24 22:35:39
+ * @LastEditors  : JF.Cheng
+ * @LastEditTime : 2023-11-30 22:09:30
  * @Description  : 
  ******************************************************************************/
 
@@ -34,16 +34,12 @@ extern "C" {
 #define CAN_ID_TYPE_EXTENDED            1
 #define CAN_FRAME_TYPE_DATA             0
 #define CAN_FRAME_TYPE_REMOTE           1
-#define CAN_TERMIAL_RESISTOR_DISABLE    0
-#define CAN_TERMIAL_RESISTOR_ENABLE     1
 
 #define CAN_SEND_FAIL                   -1
-#define CAN_READ_FAIL                   -2
+#define CAN_RECV_FAIL                   -2
 #define CAN_SEND_BUFFER_OVERFLOW        -3
 #define CAN_SEND_REMOTE_FUN_NS          -4
-#define CAN_READ_TIMEOUT                -5
-#define CAN_READ_FRAME_FORMAT_ERR       -6
-#define CAN_DERIVE_INITIAL_FAIL         -7
+#define CAN_DERIVE_INITIAL_FAIL         -5
 
 /*******************************************************************************
 * Typedefs and structures       (scope: global)

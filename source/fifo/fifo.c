@@ -5,12 +5,12 @@
  *
  ******************************************************************************/
 /*******************************************************************************
- * @FileName     : \UDS_Uart_Code\source\fifo\fifo.c
+ * @FileName     : \UDS_UNIVERSAL_HOST\source\fifo\fifo.c
  * @Author       : jianhun
  * @CreationTime : 2023-11-03 23:41:19
  * @Version       : V1.0
- * @LastEditors  : jianhun
- * @LastEditTime : 2023-11-12 23:00:00
+ * @LastEditors  : JF.Cheng
+ * @LastEditTime : 2023-11-30 16:21:49
  * @Description  : 
  ******************************************************************************/
 
@@ -83,22 +83,18 @@ tS16 set_fifo_destroy(msg_fifo_t* _pmf)
 
 tS16 set_fifo_write(msg_fifo_t* _pmf, tU8* _pdata, tU16 _len)
 {
-    tU16 headaddr ,rearaddr ,endaddr ,residuesize;
+    tU16 headaddr, rearaddr, totalres, idleres;
     
     WaitForSingleObject(_pmf->MutexSign, INFINITE);
     
     headaddr = (tU16)_pmf->Head * _pmf->Size;
     rearaddr = (tU16)_pmf->Rear * _pmf->Size;
-    endaddr = (tU16)_pmf->Count * _pmf->Size;
-    residuesize = (headaddr + endaddr - rearaddr) % endaddr;
+    totalres = (tU16)_pmf->Count * _pmf->Size;
+    idleres = (headaddr + totalres - rearaddr) % totalres;
 
-    if (get_fifo_is_full(_pmf)) goto __ERROR_STATE;
-    if (_len == 0U || _len > endaddr) goto __ERROR_STATE;
-    if (_len % _pmf->Size != 0) goto __ERROR_STATE;
-    if (get_fifo_is_empty(_pmf)) residuesize = endaddr;
-    if (_len > residuesize) goto __ERROR_STATE;
-
-    if (_len == residuesize) {
+    if (get_fifo_is_empty(_pmf)) idleres = totalres;
+    if (_len == 0 || _len > idleres || _len % _pmf->Size != 0) goto __ERROR_STATE;
+    if (_len == idleres) {
         _pmf->Rear = _pmf->Head;
         _pmf->State = FIFO_FULL;
     } else {
@@ -106,11 +102,11 @@ tS16 set_fifo_write(msg_fifo_t* _pmf, tU8* _pdata, tU16 _len)
         _pmf->State = FIFO_VALID;
     }
 
-    if (_len + rearaddr<= endaddr) {
+    if (_len + rearaddr<= totalres) {
         memcpy(_pmf->Buff + rearaddr, _pdata, _len);
     } else {
-        memcpy(_pmf->Buff + rearaddr, _pdata, endaddr - rearaddr);
-        memcpy(_pmf->Buff, _pdata + endaddr - rearaddr, _len + rearaddr - endaddr);
+        memcpy(_pmf->Buff + rearaddr, _pdata, totalres - rearaddr);
+        memcpy(_pmf->Buff, _pdata + totalres - rearaddr, _len + rearaddr - totalres);
     }
 
     ReleaseSemaphore(_pmf->MutexSign, 1, NULL);
@@ -121,37 +117,32 @@ __ERROR_STATE:
     return -1;
 }
 
-tS16 get_fifo_read(msg_fifo_t* _pmf, tU8* _pdata, tU16* _plen)
+tS16 get_fifo_read(msg_fifo_t* _pmf, tU8* _pdata, tU16 _len)
 {
-    tU16 headaddr ,rearaddr ,endaddr , residuesize;
+    tU16 headaddr, rearaddr, totalres, usedres;
 
     WaitForSingleObject(_pmf->MutexSign, INFINITE);
 
     headaddr = (tU16)_pmf->Head * _pmf->Size;
     rearaddr = (tU16)_pmf->Rear * _pmf->Size;
-    endaddr = (tU16)_pmf->Count * _pmf->Size;
-    residuesize = (rearaddr + endaddr - headaddr) % endaddr;
+    totalres = (tU16)_pmf->Count * _pmf->Size;
+    usedres = (rearaddr + totalres - headaddr) % totalres;
 
-    if (get_fifo_is_empty(_pmf)) goto __ERROR_STATE;
-    if (*_plen == 0) goto __ERROR_STATE;
-    if ((*_plen % _pmf->Size) != 0) goto __ERROR_STATE;
-
-    if (get_fifo_is_full(_pmf)) residuesize = endaddr;
-    if (*_plen > residuesize) *_plen = residuesize;
-    
-    if (*_plen == residuesize) {
+    if (get_fifo_is_full(_pmf)) usedres = totalres;
+    if (_len == 0 || _len > usedres || (_len % _pmf->Size) != 0) goto __ERROR_STATE;
+    if (_len == usedres) {
         _pmf->Head = _pmf->Rear;
         _pmf->State = FIFO_EMPTY;
     } else {
-        _pmf->Head = (_pmf->Head + (*_plen / _pmf->Size)) % _pmf->Count;
+        _pmf->Head = (_pmf->Head + (_len / _pmf->Size)) % _pmf->Count;
         _pmf->State = FIFO_VALID;
     }
 
-    if (*_plen + headaddr <= endaddr) {
-        memcpy(_pdata, _pmf->Buff + headaddr, *_plen);
+    if (_len + headaddr <= totalres) {
+        memcpy(_pdata, _pmf->Buff + headaddr, _len);
     } else {
-        memcpy(_pdata, _pmf->Buff + headaddr, endaddr - headaddr);
-        memcpy(_pdata + endaddr - headaddr, _pmf->Buff, *_plen + headaddr - endaddr);
+        memcpy(_pdata, _pmf->Buff + headaddr, totalres - headaddr);
+        memcpy(_pdata + totalres - headaddr, _pmf->Buff, _len + headaddr - totalres);
     }
 
     ReleaseSemaphore(_pmf->MutexSign, 1, NULL);
