@@ -52,7 +52,7 @@ static unsigned __stdcall ComRecvThread(void* lpparam)
 {
     comm_tool_t* pCtrl = (comm_tool_t*)lpparam;
 
-    for(;pCtrl->ComStateCtl.ReceEnable;Sleep(1))
+    for(;pCtrl->ComStateCtl.ReceEnable;Sleep(0))
     {
         cando_frame_t frame = {0U, 0U, 0U, 0U, 0U, 0U, {0U}, 0U};
 
@@ -214,6 +214,7 @@ tS16 comm_tool_open(comm_tool_t* _pctrl, tU8 _size)
 
 tS16 comm_tool_close(comm_tool_t* _pctrl)
 {
+    Sleep(10);
     set_fifo_destroy(&_pctrl->ComDataFifo.RxMsgBuff);
     set_fifo_destroy(&_pctrl->ComDataFifo.TxMsgBuff);
     if (_pctrl->ComDataFifo.RxMsgBuff.MutexSign != NULL) CloseHandle(_pctrl->ComDataFifo.RxMsgBuff.MutexSign);

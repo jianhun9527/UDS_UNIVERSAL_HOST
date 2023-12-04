@@ -94,7 +94,7 @@ static tS16 set_can_baudrate(cando_handle _mhand, tU16 _baudrate)
     for (idx = 0; idx < can_baud_list_max; idx ++)
     {
         if (candotiming[idx].baudrate == _baudrate) {
-            if (false == cando_set_timing(_mhand, &candotiming->timing)) {
+            if (false == cando_set_timing(_mhand, &candotiming[idx].timing)) {
                 return TOOL_CONFIG_BAUD_RATE_FAIL;
             }
             break;
